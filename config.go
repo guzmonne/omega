@@ -98,12 +98,12 @@ type Config struct {
   //
   Quality int `yaml:"quality"`
   //
-  // Delay between frames in ns.
+  // Delay between frames in ms.
   // If the value is "auto" use the actual recording delay.
   //
   FrameDelay Auto `yaml:"frameDelay"`
   //
-  // Maximum delay between frames in ns.
+  // Maximum delay between frames in ms.
   // Ignored if the `frameDelay` option is set to `auto`.
   // Set to `auto` to prevent limiting the max idle time.
   //
