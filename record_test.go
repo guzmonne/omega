@@ -15,6 +15,10 @@ import (
 func TestWriteRecording(t *testing.T) {
 	var recordingPath = "/tmp/" + fmt.Sprint(rand.Int())
 	var config, err = DefaultConfig()
+	var records = []Record {
+		{0, "something"},
+		{1000, "else"},
+	}
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -22,7 +26,7 @@ func TestWriteRecording(t *testing.T) {
 	// run from another folder.
 	config.Cwd = "/tmp"
 	// Should not thow an error while writing the recording.
-	if err := WriteRecording(recordingPath, config); err != nil {
+	if err := WriteRecording(recordingPath, config, records); err != nil {
 		t.Fatalf("Expected WriteRecording not to throw:\n%s", err.Error())
 	}
 	// Should write the recording to the correct location
@@ -46,6 +50,11 @@ func TestWriteRecording(t *testing.T) {
   fontSize: 12
   lineHeight: 1
   letterSpacing: 0
+records:
+  - delay: 0
+    content: something
+  - delay: 1000
+    content: else
 `
 	actual, err := ioutil.ReadFile(recordingPath)
 	if err != nil {

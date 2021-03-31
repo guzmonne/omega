@@ -31,8 +31,7 @@ type Recording struct {
 }
 // WriteRecording writes the Recording to a YAML file on the path provided by
 // the variable recordingPath.
-func WriteRecording(recordingPath string, config *Config) error {
-	var records = make([]Record, 0)
+func WriteRecording(recordingPath string, config *Config, records []Record) error {
 	var file bytes.Buffer
 
 	// Create a custom YAML encoder
@@ -55,7 +54,7 @@ func WriteRecording(recordingPath string, config *Config) error {
 }
 
 // RecordShell runs a pty shell that will record stdout into a recordings file.
-func RecordShell(config *Config) error {
+func RecordShell(recordingPath string, config *Config) error {
 	// Create a command
 	c := exec.Command(config.Command)
 
@@ -106,9 +105,21 @@ func RecordShell(config *Config) error {
 	// Restore the old state of stdin when done.
 	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
 
-	// Copy stdin to the pty and the pty to stdout
+		// Create a RecordWriter
+	writer := NewRecordWriter()
+
+	// Create a MultiWriter
+	multi := io.MultiWriter(writer, os.Stdout)
+
+	// Copy stdin to the pty and the pty to stdout and writer
 	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
-	_, _ = io.Copy(os.Stdout, ptmx)
+	if _, err = io.Copy(multi, ptmx); err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		WriteRecording(recordingPath, config, writer.records)
+	}()
 
 	return nil
 }
