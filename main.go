@@ -2,42 +2,45 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 )
 
 // ParseFlags will parse de CLI flags and apply defaults to its values.
-func ParseFlags() (string, error) {
+func ParseFlags() (string, string, error) {
 	var configPath string
+	var outputPath string
+	var ulid = ULID()
 
-	// Setup a CLI flag called `-config-path`.
-	flag.StringVar(&configPath, "config-path", "./config.yml", "Path to the CLI configuration file.")
+	// Setup flags
+	flag.StringVar(&configPath, "config", "./config.yml", "Path to the CLI configuration file.")
+	flag.StringVar(&outputPath, "output", "./" + ulid + ".yml", "Path to store the recordin output.")
 
 	// Parse the flags
 	flag.Parse()
 
-	// Validate the path
+	// Validate the paths
 	if err := ValidateConfigPath(configPath); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return configPath, nil
+	return configPath, outputPath, nil
 }
 
 func main() {
-	// Generate the config struct
-	configPath, err := ParseFlags()
+	// Parse the cli flags
+	configPath, outputPath, err := ParseFlags()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Create the configuration struct
 	config, err := NewConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("--- config:\n%v\n\n", config)
-
-	if err := RecordShell(config); err != nil {
+	// Run the tty shell and record it.
+	if err := RecordShell(outputPath, config); err != nil {
 		log.Fatal(err)
 	}
 }
