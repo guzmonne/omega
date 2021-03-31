@@ -7,6 +7,7 @@ require (
 	github.com/creack/pty v1.1.11
 	github.com/oklog/ulid/v2 v2.0.2
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/sys v0.0.0-20210330210617-4fbd30eecc44 // indirect
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	gopkg.in/yaml.v2 v2.4.0 // indirect

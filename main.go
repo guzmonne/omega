@@ -1,46 +1,69 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"log"
+	"os"
+
+	"github.com/urfave/cli/v2"
 )
 
-// ParseFlags will parse de CLI flags and apply defaults to its values.
-func ParseFlags() (string, string, error) {
+func main() {
 	var configPath string
 	var outputPath string
 	var ulid = ULID()
 
-	// Setup flags
-	flag.StringVar(&configPath, "config", "./config.yml", "Path to the CLI configuration file.")
-	flag.StringVar(&outputPath, "output", "./" + ulid + ".yml", "Path to store the recordin output.")
+	app := &cli.App{
+		Name: "Omega",
+		Usage: "CLI Recorder",
+		Action: func(c *cli.Context) error {
+			fmt.Println("Command not found. Try the -h or --help flags for more information.")
+			return nil
+		},
+		Commands: []*cli.Command{
+			{
+				Name: "record",
+				Aliases: []string{"r"},
+				Usage: "record a cli session",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "config",
+						Aliases: []string{"c"},
+						Value: "./config.yml",
+						Usage: "configuration file",
+						Destination: &configPath,
+						EnvVars: []string{"OMEGA_CONFIG"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name: "output",
+						Aliases: []string{"o"},
+						Value: "./" + ulid + ".yml",
+						DefaultText: "./{random}.yml",
+						Usage: "configuration file",
+						Destination: &outputPath,
+						EnvVars: []string{"OMEGA_OUTPUT"},
+					},
+				},
+				Action: func(c *cli.Context) error {
+					// Create the configuration struct
+					config, err := NewConfig(configPath)
+					if err != nil {
+						log.Fatal(err)
+					}
 
-	// Parse the flags
-	flag.Parse()
+					if err := RecordShell(outputPath, config); err != nil {
+						log.Fatal(err)
+					}
 
-	// Validate the paths
-	if err := ValidateConfigPath(configPath); err != nil {
-		return "", "", err
+					return nil
+				},
+			},
+		},
 	}
 
-	return configPath, outputPath, nil
-}
-
-func main() {
-	// Parse the cli flags
-	configPath, outputPath, err := ParseFlags()
+	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create the configuration struct
-	config, err := NewConfig(configPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Run the tty shell and record it.
-	if err := RecordShell(outputPath, config); err != nil {
 		log.Fatal(err)
 	}
 }
