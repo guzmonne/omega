@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -11,8 +10,8 @@ type RecordWriter struct {
 	records []Record
 }
 // MIN_DELAY corresponds to the minimum time that needs to elapse to consider the
-// creation of a new Record in ns.
-const MIN_DELAY = 5000
+// creation of a new Record in ms.
+const MIN_DELAY = 5
 func NewRecordWriter() *RecordWriter {
 	// Create an empty []Record
 	records := make([]Record, 0)
@@ -25,13 +24,12 @@ func (writer *RecordWriter) Write(input []byte) (int, error) {
 	// Calculate the delay since the last record
 	var delay int
 	if len(writer.records) == 0 {
-		record := &Record{0, string(input)}
+		record := &Record{int(time.Now().Nanosecond() / 1000 / 1000), string(input)}
 		writer.records = append(writer.records, *record)
 	} else {
 		// If the delay is less than MIN_DELAY then we get the previous record
 		// and update it. Else we create a new one.
-		delay = int(time.Since(writer.timestamp))
-		fmt.Println(delay)
+		delay = int(time.Since(writer.timestamp) / 1000 / 1000)
 		if delay < MIN_DELAY {
 			// Get the previous Record and update its content
 			previous := &writer.records[len(writer.records) - 1]
