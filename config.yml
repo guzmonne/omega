@@ -32,11 +32,11 @@ repeat: 0
 # 1 - 100
 quality: 100
 
-# Delay between frames in ms
+# Delay between frames in ns
 # If the value is 'auto' use the actual recording delays
 frameDelay: auto
 
-# Maximum delay between frames in ms
+# Maximum delay between frames in ns
 # Ignored if the 'frameDelay' isn't set to 'auto'
 # Set to 'auto' to prevent limiting the max idle time
 maxIdleTime: 2000

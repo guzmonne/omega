@@ -15,33 +15,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//
-// PTY interface record
-//
+// Record corresponds to a PTY interface stdout record
 type Record struct {
-	//
-  // Time from the last record.
-  //
+  // Delay from the last record.
 	Delay int `yaml:"delay"`
-	//
   // Content of the record.
-  //
 	Content string `yaml:"content"`
 }
-//
-// Recording file
-//
+// Recording is the output from a Recording Session
 type Recording struct {
-	//
-  // Configuration used for the recording.
-  //
+  // Config used for the recording.
 	Config Config `yaml:"config"`
-	//
-  // Stored records of the recording.
-  //
+  // Records correspond to the list of stdout outputs generated during the recording.
 	Records []Record `yaml:"records,omitempty"`
 }
-
+// WriteRecording writes the Recording to a YAML file on the path provided by
+// the variable recordingPath.
 func WriteRecording(recordingPath string, config *Config) error {
 	var records = make([]Record, 0)
 	var file bytes.Buffer
@@ -65,12 +54,16 @@ func WriteRecording(recordingPath string, config *Config) error {
 	return nil
 }
 
-// RecordShell runs a pty shell that will record stdout onto a recordings file.
+// RecordShell runs a pty shell that will record stdout into a recordings file.
 func RecordShell(config *Config) error {
 	// Create a command
 	c := exec.Command(config.Command)
 
+	// Add the environment variables provied by the config
 	c.Env = append(os.Environ(), config.Env.Values...)
+
+	// Modify the Current Working Directory of the command.
+	c.Dir = config.Cwd
 
 	// Start command with a pty
 	ptmx, err := pty.Start(c)
@@ -83,9 +76,21 @@ func RecordShell(config *Config) error {
 
 	// Handle the pty size
 	ch := make(chan os.Signal, 1)
+	// Send a Signal Windows Change to redraw the window.
 	signal.Notify(ch, syscall.SIGWINCH)
 	go func() {
 		for range ch {
+			// If Rows and Cols are defined then resize the window.
+			if config.Rows != -1 && config.Cols != -1 {
+				err := pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(config.Rows), Cols: uint16(config.Cols)})
+				// If an error occurred print it and let the window inherit sdtin size.
+				if err != nil {
+					log.Printf("error applying custom size to pty: %s", err)
+				} else {
+					break
+				}
+			}
+			// Set the pty window to the same size as stdin.
 			if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
 				log.Printf("error resizing pty: %s", err)
 			}
@@ -98,6 +103,7 @@ func RecordShell(config *Config) error {
 	if err != nil {
 		panic(err)
 	}
+	// Restore the old state of stdin when done.
 	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
 
 	// Copy stdin to the pty and the pty to stdout
