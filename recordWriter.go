@@ -24,7 +24,7 @@ func (writer *RecordWriter) Write(input []byte) (int, error) {
 	// Calculate the delay since the last record
 	var delay int
 	if len(writer.records) == 0 {
-		record := &Record{int(time.Now().Nanosecond() / 1000 / 1000), string(input)}
+		record := &Record{0, string(input)}
 		writer.records = append(writer.records, *record)
 	} else {
 		// If the delay is less than MIN_DELAY then we get the previous record

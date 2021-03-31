@@ -14,13 +14,12 @@ func TestRecordWriterWrite(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// If it's the first record it should be added with a delay equal to the
-	// current timestamp.
+	// If it's the first record it should be added with a delay equal zero.
 	if len(writer.records) == 1 {
 		records := writer.records
 		record := records[0]
-		if int(time.Now().Nanosecond() / 1000 / 1000) - record.Delay < MIN_DELAY  {
-			t.Fatalf("record.Delay = %d; expected to be close to %d", record.Delay, int(time.Now().Nanosecond()))
+		if record.Delay != 0 {
+			t.Fatalf("record.Delay = %d; expected to be close to %d", record.Delay, 0)
 		}
 	} else {
 		t.Fatalf("len(writer.records) = %d; expected 1", len(writer.records))
