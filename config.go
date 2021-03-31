@@ -38,8 +38,15 @@ func (env *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// Environment unmarshaled map
 	environments := make(map[string]string)
 
-	// Try to unmrarshall the value.
-	err := unmarshal(&environments)
+	// Trt to unmarshall the value as if it was a []string
+	err := unmarshal(&values)
+	if err == nil {
+		env.Values = values
+		return nil
+	}
+
+	// Try to unmarshall the value.
+	err = unmarshal(&environments)
 	if err != nil {
 		// If its empty return an empty map.
 		env.Values = make([]string, 0)
@@ -123,26 +130,38 @@ type Config struct {
   //
   LetterSpacing int `yaml:"letterSpacing"`
 }
-// NewConfig returns a new CLI configuration with its default values.
-func NewConfig(configPath string) (*Config, error) {
+
+// DefaultConfig returns a default Config struct
+func DefaultConfig() (*Config, error) {
 	// Get the current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// Create a default config struct
 	config := &Config{
 		Command: "/bin/bash",
 		Cwd: cwd,
+		Env: Environment{make([]string, 0)},
+		Cols: Auto(-1),
+		Rows: Auto(-1),
 		Repeat: 0,
 		Quality: 100,
+		FrameDelay: Auto(-1),
+		MaxIdleTime: Auto(-1),
 		CursorStyle: "block",
 		FontFamily: "Monaco, Lucida Console, Ubuntu Mono, Monospace",
 		FontSize: 12,
 		LineHeight: 1,
 		LetterSpacing: 0,
 	}
+	return config, nil
+}
+
+// NewConfig returns a new CLI configuration with its default values.
+func NewConfig(configPath string) (*Config, error) {
+	config, err := DefaultConfig()
 
 	// Open config file
 	file, err := os.Open(configPath)
@@ -162,6 +181,7 @@ func NewConfig(configPath string) (*Config, error) {
 	// Return the configuration object
 	return config, nil
 }
+
 // ValidateConfigPath makes sure the path is valid.
 func ValidateConfigPath(path string) error {
 	stat, err := os.Stat(path)

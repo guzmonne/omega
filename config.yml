@@ -6,7 +6,7 @@ command: /bin/bash
 
 # Specify the current working directory path
 # the default is the current working directory path
-cwd: null
+cwd: /tmp
 
 # Export additional ENV variables
 env:

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/creack/pty"
 	"golang.org/x/term"
+	"gopkg.in/yaml.v3"
 )
 
 //
@@ -36,7 +39,30 @@ type Recording struct {
 	//
   // Stored records of the recording.
   //
-	Records []Record `yaml:"records"`
+	Records []Record `yaml:"records,omitempty"`
+}
+
+func WriteRecording(recordingPath string, config *Config) error {
+	var records = make([]Record, 0)
+	var file bytes.Buffer
+
+	// Create a custom YAML encoder
+	yamlEncoder := yaml.NewEncoder(&file)
+	yamlEncoder.SetIndent(2)
+
+	// Marshall to YAML the Recording struct
+	err := yamlEncoder.Encode(Recording{*config, records})
+	if err != nil {
+		return err
+	}
+
+	// Write the recording file
+	err = ioutil.WriteFile(recordingPath, file.Bytes(), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RecordShell runs a pty shell that will record stdout onto a recordings file.
@@ -74,13 +100,9 @@ func RecordShell(config *Config) error {
 	}
 	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
 
-	//var export = "export PS1='$ '\nclear\n"
-	//ptmx.Write([]byte(export))
-
 	// Copy stdin to the pty and the pty to stdout
 	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 	_, _ = io.Copy(os.Stdout, ptmx)
-
 
 	return nil
 }

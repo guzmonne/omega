@@ -3,6 +3,7 @@ module gux.codes/omega
 go 1.15
 
 require (
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/creack/pty v1.1.11
 	github.com/go-delve/delve v1.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
@@ -11,6 +12,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cobra v1.1.3 // indirect
 	go.starlark.net v0.0.0-20210312235212-74c10e2c17dc // indirect
