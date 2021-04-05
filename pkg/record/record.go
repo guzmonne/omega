@@ -1,4 +1,4 @@
-package main
+package record
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"github.com/creack/pty"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
+	"gux.codes/omega/pkg/configure"
 )
 
 // Record corresponds to a PTY interface stdout record
@@ -25,21 +26,21 @@ type Record struct {
 // Recording is the output from a Recording Session
 type Recording struct {
   // Config used for the recording.
-	Config Config `yaml:"config"`
+	Config configure.Config `yaml:"config"`
   // Records correspond to the list of stdout outputs generated during the recording.
 	Records []Record `yaml:"records,omitempty"`
 }
 // WriteRecording writes the Recording to a YAML file on the path provided by
 // the variable recordingPath.
-func WriteRecording(recordingPath string, config *Config, records []Record) error {
+func WriteRecording(recordingPath string, config *configure.Config, records []Record) error {
 	var file bytes.Buffer
 
 	// Create a custom YAML encoder
-	yamlEncoder := yaml.NewEncoder(&file)
-	yamlEncoder.SetIndent(2)
+	encoder := yaml.NewEncoder(&file)
+	encoder.SetIndent(2)
 
 	// Marshall to YAML the Recording struct
-	err := yamlEncoder.Encode(Recording{*config, records})
+	err := encoder.Encode(Recording{*config, records})
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func WriteRecording(recordingPath string, config *Config, records []Record) erro
 }
 
 // RecordShell runs a pty shell that will record stdout into a recordings file.
-func RecordShell(recordingPath string, config *Config) error {
+func RecordShell(recordingPath string, config *configure.Config) error {
 	// Create a command
 	c := exec.Command(config.Command)
 

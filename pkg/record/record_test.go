@@ -1,4 +1,4 @@
-package main
+package record
 
 import (
 	"fmt"
@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/andreyvit/diff"
+	"gux.codes/omega/pkg/configure"
 )
 
 // WriteRecording function tests
 func TestWriteRecording(t *testing.T) {
 	var recordingPath = "/tmp/" + fmt.Sprint(rand.Int())
-	var config, err = DefaultConfig()
+	var config, err = configure.DefaultConfig()
 	var records = []Record {
 		{0, "something"},
 		{1000, "else"},

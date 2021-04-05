@@ -1,9 +1,13 @@
-package main
+package configure
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 
+	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
 )
 
@@ -133,16 +137,10 @@ type Config struct {
 
 // DefaultConfig returns a default Config struct
 func DefaultConfig() (*Config, error) {
-	// Get the current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
 	// Create a default config struct
 	config := &Config{
 		Command: "/bin/bash",
-		Cwd: cwd,
+		Cwd: os.Getenv("HOME") + "/" + ".omega",
 		Env: Environment{make([]string, 0)},
 		Cols: Auto(-1),
 		Rows: Auto(-1),
@@ -182,6 +180,72 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
+// ReadConfig reads a config file and return its unmarshalled contents
+func ReadConfig(configPath string) (Config, error) {
+	// Check if the config exists at `configPath`
+	if _, err := os.Stat(configPath); err == nil {
+		return *&Config{}, errors.New("Can't foun config file at " + configPath)
+	}
+	// Open the configuration file
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return *&Config{}, err
+	}
+	// Unmarshall the configuration file
+	var config Config
+	if err := yaml.Unmarshal(configFile, &config); err != nil {
+		return *&Config{}, err
+	}
+
+	return config, nil
+}
+
+// WriteConfig writes a config object to a YAML file
+func WriteConfig(configPath string, config Config) error {
+	// Create YAML encoder
+	var file bytes.Buffer
+	encoder := yaml.NewEncoder(&file)
+	encoder.SetIndent(2)
+	// Encode the default config
+	if err := encoder.Encode(config); err != nil {
+		return err
+	}
+	// Write the recording file
+	if err := ioutil.WriteFile(configPath, file.Bytes(), 0644); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Merge mergess two Config structs
+func Merge(config1 Config, config2 Config) Config {
+	// Merge `cwd`
+	config1.Cwd = config2.Cwd
+
+	return config1
+}
+
+// UpdateConfig updates the cli project configuration.
+func UpdateConfig(configPath string, updates Config) error {
+	// Get the configuration from the file
+	config, err := ReadConfig(configPath)
+	if err != nil {
+		return err
+	}
+	// Mege both configuration structs
+	config = Merge(config, updates)
+	if err != nil {
+		return err
+	}
+	// Store the updated configuration to the file
+	if err := WriteConfig(configPath, config); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ValidateConfigPath makes sure the path is valid.
 func ValidateConfigPath(path string) error {
 	stat, err := os.Stat(path)
@@ -191,5 +255,42 @@ func ValidateConfigPath(path string) error {
 	if stat.IsDir() {
 		return fmt.Errorf("'%s' is a directory, not a file.", path)
 	}
+	return nil
+}
+const CONFIG_FILENAME = "config.yml"
+
+func writeDefaultConfig(configPath string) error {
+	if _, err := os.Stat(configPath); err != nil {
+		// File doesn't exists
+		config, err := DefaultConfig()
+		if err != nil {
+			return err
+		}
+		WriteConfig(configPath, *config)
+		color.Green("Configuration file created at: %s", configPath)
+	} else {
+		// File exists
+		color.Blue("Configuration file already exists: %s", configPath)
+	}
+
+	return nil
+}
+// Init instantiates the cli project folder with its default configuration.
+func Init(projectFolder string) error {
+	stat, err := os.Stat(projectFolder)
+	if err != nil {
+		// Folder doesn't exists
+		if err := os.MkdirAll(projectFolder, 0755); err != nil {
+			return err
+		}
+		color.Green("Folder %s created.", projectFolder)
+	} else {
+		if stat.IsDir() {
+			color.Blue("Folder %s already exists.", projectFolder)
+		}
+	}
+
+	writeDefaultConfig(projectFolder + "/config.yml")
+
 	return nil
 }

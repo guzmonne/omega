@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -6,12 +6,16 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+	"gux.codes/omega/pkg/configure"
+	"gux.codes/omega/pkg/record"
+	"gux.codes/omega/pkg/utils"
 )
 
-func main() {
+func CreateApp() cli.App {
 	var configPath string
 	var outputPath string
-	var ulid = ULID()
+	var projectFolder string
+	var ulid = utils.ULID()
 
 	app := &cli.App{
 		Name: "Omega",
@@ -21,6 +25,35 @@ func main() {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name: "init",
+				Aliases: []string{"i"},
+				Usage: "initialize the app",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "folder",
+						Aliases: []string{"f"},
+						Value: os.Getenv("HOME") + "/.omega",
+						Usage: "project folder",
+						Destination: &projectFolder,
+						EnvVars: []string{"OMEGA_PROJECT_FOLDER"},
+					},
+					&cli.StringFlag{
+						Name: "cwd",
+						Aliases: []string{"f"},
+						Value: os.Getenv("HOME") + "/.omega",
+						Usage: "change the default config 'cwd' value",
+						EnvVars: []string{"OMEGA_PROJECT_CWD"},
+					},
+				},
+				Action: func(c *cli.Context) error {
+					if err := configure.Init(projectFolder); err != nil {
+						log.Fatal(err)
+					}
+
+					return nil
+				},
+			},
 			{
 				Name: "record",
 				Aliases: []string{"r"},
@@ -47,12 +80,12 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					// Create the configuration struct
-					config, err := NewConfig(configPath)
+					config, err := configure.NewConfig(configPath)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					if err := RecordShell(outputPath, config); err != nil {
+					if err := record.RecordShell(outputPath, config); err != nil {
 						log.Fatal(err)
 					}
 
@@ -62,8 +95,5 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return *app
 }
