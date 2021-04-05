@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"gux.codes/omega/pkg/configure"
 	"gux.codes/omega/pkg/record"
@@ -31,22 +32,38 @@ func CreateApp() cli.App {
 				Usage: "initialize the app",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "folder",
-						Aliases: []string{"f"},
+						Name: "path",
+						Aliases: []string{"p"},
 						Value: os.Getenv("HOME") + "/.omega",
-						Usage: "project folder",
+						Usage: "project folder path",
 						Destination: &projectFolder,
 						EnvVars: []string{"OMEGA_PROJECT_FOLDER"},
 					},
+					&cli.BoolFlag{
+						Name: "force",
+						Aliases: []string{"f"},
+						Value: false,
+						Usage: "overwrites the project folder if defined",
+						EnvVars: []string{"OMEGA_PROJECT_FORCE"},
+					},
 					&cli.StringFlag{
 						Name: "cwd",
-						Aliases: []string{"f"},
+						Aliases: []string{"c"},
 						Value: os.Getenv("HOME") + "/.omega",
 						Usage: "change the default config 'cwd' value",
 						EnvVars: []string{"OMEGA_PROJECT_CWD"},
 					},
 				},
 				Action: func(c *cli.Context) error {
+					if c.Bool("force") {
+						if err := os.RemoveAll(projectFolder); err != nil {
+							log.Fatal(err)
+						} else {
+							color.Red("Folder %s destroyed", projectFolder)
+							fmt.Println("---")
+						}
+					}
+
 					if err := configure.Init(projectFolder); err != nil {
 						log.Fatal(err)
 					}
