@@ -3,6 +3,7 @@ package configure
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -89,8 +90,7 @@ func TestWriteConfig(t *testing.T) {
 	expected := `command: /example
 cwd: /example
 env:
-  values:
-    - environment=variable
+  - environment=variable
 cols: 0
 rows: 0
 repeat: 0
@@ -112,7 +112,7 @@ func TestReadConfig(t *testing.T) {
 	config := &Config{
 		Command: "/example",
 		Cwd: "/example",
-		Env: *&Environment{
+		Env: Environment{
 			Values: []string{"environment=variable"},
 		},
 	}
@@ -121,7 +121,7 @@ func TestReadConfig(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	// Clean everything after the test stops
-	//defer cleanup(configPath)
+	defer cleanup(configPath)
 
 	// Write a sample config to the test file
 	if err := WriteConfig(configPath, *config); err != nil {
@@ -133,7 +133,7 @@ func TestReadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	if conf != config {
+	if !reflect.DeepEqual(conf, config) {
 		t.Errorf("\nactual:\n\t%v\nexpected:\n\t%v", conf, config)
 	}
 }
@@ -146,14 +146,13 @@ func createDefaultConfig() string {
 	cwd := os.Getenv("HOME") + "/.omega"
 	return `command: /bin/bash
 cwd: ` + cwd + `
-env:
-  values: []
-cols: -1
-rows: -1
+env: []
+cols: auto
+rows: auto
 repeat: 0
 quality: 100
-frameDelay: -1
-maxIdleTimeout: -1
+frameDelay: auto
+maxIdleTimeout: auto
 cursorStyle: block
 fontFamily: Monaco, Lucida Console, Ubuntu Mono, Monospace
 fontSize: 12
