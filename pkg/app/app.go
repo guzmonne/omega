@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"gux.codes/omega/pkg/configure"
+	"gux.codes/omega/pkg/player"
 	"gux.codes/omega/pkg/record"
 	"gux.codes/omega/pkg/utils"
 )
@@ -16,6 +17,7 @@ func CreateApp() cli.App {
 	var configPath string
 	var outputPath string
 	var projectFolder string
+	var recordingPath string
 
 	var ulid = utils.ULID()
 	var home = os.Getenv("HOME") + "/.omega"
@@ -28,6 +30,27 @@ func CreateApp() cli.App {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name: "play",
+				Usage: "reproduce a recording file",
+				Aliases: []string{"p"},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "recording",
+						Aliases: []string{"r"},
+						Value: home,
+						Usage: "recording path",
+						Destination: &recordingPath,
+						EnvVars: []string{"OMEGA_RECORDING_PATH"},
+					},
+				},
+				Action: func(c *cli.Context) error {
+					options := player.NewPlayOptions()
+					player.Play(recordingPath, options)
+
+					return nil
+				},
+			},
 			{
 				Name: "init",
 				Aliases: []string{"i"},
