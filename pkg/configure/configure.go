@@ -11,14 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Environment variables type
-type Environment struct {
-	Values []string
-}
-// Unmarshalls the Environment type from a `map[string]string` into `[]string`.
-func (env *Environment) UnmarshalYAML(value *yaml.Node) error {
-	return nil
-}
 //
 // CLI Configuration object
 //
