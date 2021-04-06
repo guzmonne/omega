@@ -16,7 +16,9 @@ func CreateApp() cli.App {
 	var configPath string
 	var outputPath string
 	var projectFolder string
+
 	var ulid = utils.ULID()
+	var home = os.Getenv("HOME") + "/.omega"
 
 	app := &cli.App{
 		Name: "Omega",
@@ -34,7 +36,7 @@ func CreateApp() cli.App {
 					&cli.StringFlag{
 						Name: "path",
 						Aliases: []string{"p"},
-						Value: os.Getenv("HOME") + "/.omega",
+						Value: home,
 						Usage: "project folder path",
 						Destination: &projectFolder,
 						EnvVars: []string{"OMEGA_PROJECT_FOLDER"},
@@ -44,7 +46,7 @@ func CreateApp() cli.App {
 						Aliases: []string{"f"},
 						Value: false,
 						Usage: "overwrites the project folder if defined",
-						EnvVars: []string{"OMEGA_PROJECT_FORCE"},
+						EnvVars: []string{"OMEGA_INIT_FORCE"},
 					},
 				},
 				Action: func(c *cli.Context) error {
@@ -72,11 +74,10 @@ func CreateApp() cli.App {
 					&cli.StringFlag{
 						Name: "config",
 						Aliases: []string{"c"},
-						Value: "./config.yml",
+						Value: home + "/config.yml",
 						Usage: "configuration file",
 						Destination: &configPath,
-						EnvVars: []string{"OMEGA_CONFIG"},
-						Required: true,
+						EnvVars: []string{"OMEGA_RECORD_CONFIG"},
 					},
 					&cli.StringFlag{
 						Name: "output",
@@ -85,7 +86,7 @@ func CreateApp() cli.App {
 						DefaultText: "./{random}.yml",
 						Usage: "configuration file",
 						Destination: &outputPath,
-						EnvVars: []string{"OMEGA_OUTPUT"},
+						EnvVars: []string{"OMEGA_RECORD_OUTPUT"},
 					},
 				},
 				Action: func(c *cli.Context) error {
