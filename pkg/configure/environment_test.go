@@ -31,7 +31,6 @@ func TestYAMLUnmarshal(t *testing.T) {
 		key, value := splitLink(env, "=")
 		encoded = encoded + fmt.Sprintf("\n  %s: %s", key, value)
 	}
-	fmt.Println(encoded)
 	if err := yaml.Unmarshal([]byte(encoded), &actual1); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -44,7 +43,6 @@ func TestYAMLUnmarshal(t *testing.T) {
 	for _, env := range envs {
 		encoded = encoded + fmt.Sprintf("\n  - %s", env)
 	}
-	fmt.Println(encoded)
 	if err := yaml.Unmarshal([]byte(encoded), &actual2); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -63,7 +61,6 @@ func TestYAMLUnmarshal(t *testing.T) {
 	for _, env := range envs {
 		encoded = encoded + fmt.Sprintf("\n  - %s", env)
 	}
-	fmt.Println(encoded)
 	err := yaml.Unmarshal([]byte(encoded), &actual3)
 	if err != nil {
 		t.Fatalf(err.Error())

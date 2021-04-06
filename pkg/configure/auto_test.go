@@ -33,7 +33,6 @@ func TestAutoUnmarshall(t *testing.T) {
 	expected = &Test{Auto(-1)}
 	for _, thing := range anything {
 		encoded = fmt.Sprintf("auto: %s", thing)
-		fmt.Println(encoded)
 		if err := yaml.Unmarshal([]byte(encoded), &actual); err != nil {
 			t.Fatalf(err.Error())
 		}
