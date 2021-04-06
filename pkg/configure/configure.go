@@ -11,57 +11,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Auto type indicates a value if its bigger or equal to zero
-// and -1 when the value is not an int.
-type Auto int
 // Environment variables type
 type Environment struct {
 	Values []string
 }
-// Unmarshall function that will parse any value that is not an
-// integer as the value "auto".
-func (auto *Auto) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var value int
-
-	// Try to unmarshall the value as if it was an int
-	err := unmarshal(&value)
-
-	// If an error ocurred then set the value as -1 else store the value.
-	if err != nil {
-		*auto = -1
-	} else {
-		*auto = Auto(value)
-	}
-
-	return nil
-}
 // Unmarshalls the Environment type from a `map[string]string` into `[]string`.
-func (env *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Variable to store the environment variables with format key=value
-	var values []string
-	// Environment unmarshaled map
-	environments := make(map[string]string)
-
-	// Trt to unmarshall the value as if it was a []string
-	err := unmarshal(&values)
-	if err == nil {
-		env.Values = values
-		return nil
-	}
-
-	// Try to unmarshall the value.
-	err = unmarshal(&environments)
-	if err != nil {
-		// If its empty return an empty map.
-		env.Values = make([]string, 0)
-	} else {
-		// If keys are defined convert them into a slice of `key=value` strings
-		for key, value := range environments {
-			values = append(values, key + "=" + value)
-		}
-		env.Values = values
-	}
-
+func (env *Environment) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 //
@@ -181,23 +136,23 @@ func NewConfig(configPath string) (*Config, error) {
 }
 
 // ReadConfig reads a config file and return its unmarshalled contents
-func ReadConfig(configPath string) (Config, error) {
+func ReadConfig(configPath string) (*Config, error) {
 	// Check if the config exists at `configPath`
-	if _, err := os.Stat(configPath); err == nil {
-		return *&Config{}, errors.New("Can't foun config file at " + configPath)
+	if _, err := os.Stat(configPath); err != nil {
+		return &Config{}, errors.New("Can't find a file at: " + configPath)
 	}
 	// Open the configuration file
 	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return *&Config{}, err
+		return &Config{}, err
 	}
 	// Unmarshall the configuration file
 	var config Config
 	if err := yaml.Unmarshal(configFile, &config); err != nil {
-		return *&Config{}, err
+		return &Config{}, err
 	}
 
-	return config, nil
+	return &config, nil
 }
 
 // WriteConfig writes a config object to a YAML file
@@ -219,7 +174,7 @@ func WriteConfig(configPath string, config Config) error {
 }
 
 // Merge mergess two Config structs
-func Merge(config1 Config, config2 Config) Config {
+func Merge(config1 *Config, config2 *Config) *Config {
 	// Merge `cwd`
 	config1.Cwd = config2.Cwd
 
@@ -227,7 +182,7 @@ func Merge(config1 Config, config2 Config) Config {
 }
 
 // UpdateConfig updates the cli project configuration.
-func UpdateConfig(configPath string, updates Config) error {
+func UpdateConfig(configPath string, updates *Config) error {
 	// Get the configuration from the file
 	config, err := ReadConfig(configPath)
 	if err != nil {
@@ -239,7 +194,7 @@ func UpdateConfig(configPath string, updates Config) error {
 		return err
 	}
 	// Store the updated configuration to the file
-	if err := WriteConfig(configPath, config); err != nil {
+	if err := WriteConfig(configPath, *config); err != nil {
 		return err
 	}
 

@@ -1,9 +1,7 @@
 package configure
 
 import (
-	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -13,10 +11,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Struct to test the Auto Unmarshall and Marshall overrides.
-type TestAuto struct {
-	Test Auto `yaml:"test"`
+func cleanup(path string) error {
+	// Delete the temp folder
+	if err := os.RemoveAll(path); err != nil {
+		return err
+	}
+
+	return nil
 }
+
+
 // Struct to test the Environment Unmarshall and Marshall overrides.
 type TestEnvironment struct {
 	Env Environment `yaml:"env"`
@@ -24,30 +28,6 @@ type TestEnvironment struct {
 // TestYAMLUnmarshal tests if the Unmarshall overrides for YAML
 // encoded strings works.
 func TestYAMLUnmarshal(t *testing.T) {
-	var expected = Auto(rand.Int())
-	var a TestAuto
-	// If the value of Auto is a number it should leave it as is.
-	yaml.Unmarshal([]byte("test: " + fmt.Sprint(expected)), &a)
-	if a.Test != expected {
-		t.Errorf("a.Test = %d; expected %d", a.Test, expected)
-	}
-	// If the value of Auto is anything else is should be -1.
-	yaml.Unmarshal([]byte("test: auto"), &a)
-	if a.Test != -1 {
-		t.Errorf("a.Test = %d; expected %d", a.Test, -1)
-	}
-	yaml.Unmarshal([]byte("test: yes"), &a)
-	if a.Test != -1 {
-		t.Errorf("a.Test = %d; expected %d", a.Test, -1)
-	}
-	yaml.Unmarshal([]byte("test: {\"something\": \"cool\"}"), &a)
-	if a.Test != -1 {
-		t.Errorf("a.Test = %d; expected %d", a.Test, -1)
-	}
-	yaml.Unmarshal([]byte("test: [1, 2, 3]"), &a)
-	if a.Test != -1 {
-		t.Errorf("a.Test = %d; expected %d", a.Test, -1)
-	}
 	// If the value of environment is undefined is should return an empty `[]string`
 	var e TestEnvironment
 	yaml.Unmarshal([]byte("something: else"), &e)
@@ -59,17 +39,11 @@ func TestYAMLUnmarshal(t *testing.T) {
 	if len(e.Env.Values) != 0 {
 		t.Errorf("len(e.Env.Values) = %d; expected 0", len(e.Env.Values))
 	}
-	// If the value is a `map[string]string` it sould return a `[]string` filled with string of type `key=value`
-	environments := []string{"something=awesome", "test=example"}
-	yaml.Unmarshal([]byte("env:\n  something: awesome\n  test: example"), &e)
-	if reflect.DeepEqual(e.Env.Values, environments) == false {
-		t.Errorf("e.Env.Values = %s; expected %s", e.Env.Values, environments)
-	}
-	// If the value is a `[]string` it sould return a `[]string`
-	environments = []string{"something=awesome", "test=example"}
-	yaml.Unmarshal([]byte("env:\n  - something=awesome\n  - test=example"), &e)
-	if reflect.DeepEqual(e.Env.Values, environments) == false {
-		t.Errorf("e.Env.Values = %s; expected %s", e.Env.Values, environments)
+	// If the value is a marshalled `Environment` struct it should parse it correctly.
+	env := &Environment{[]string{"something=awesome", "test=example"}}
+	yaml.Unmarshal([]byte("env:\n  values:\n    something: awesome\n    test: example"), &e)
+	if reflect.DeepEqual(e.Env.Values, env.Values) == false {
+		t.Errorf("e.Env.Values = %s; expected %s", e.Env.Values, env.Values)
 	}
 }
 // TestDefaultConfig tests if the function can create a new Config struct.
@@ -120,7 +94,7 @@ func TestWriteConfig(t *testing.T) {
 	// Cleanup
 	defer cleanup(configPath)
 
-	// Create a random Config
+	// Create a test Config
 	config := &Config{
 		Command: "/example",
 		Cwd: "/example",
@@ -161,7 +135,34 @@ letterSpacing: 0`
 }
 
 func TestReadConfig(t *testing.T) {
-	// TODO
+	configPath := "/tmp/test_read_config.yml"
+	config := &Config{
+		Command: "/example",
+		Cwd: "/example",
+		Env: *&Environment{
+			Values: []string{"environment=variable"},
+		},
+	}
+	// Make sure there are no existing files
+	if err := cleanup(configPath); err != nil {
+		t.Fatalf(err.Error())
+	}
+	// Clean everything after the test stops
+	//defer cleanup(configPath)
+
+	// Write a sample config to the test file
+	if err := WriteConfig(configPath, *config); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	// Read the configuration and check that the contents match
+	conf, err := ReadConfig(configPath)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if conf != config {
+		t.Errorf("\nactual:\n\t%v\nexpected:\n\t%v", conf, config)
+	}
 }
 
 const configFolder = "/tmp/test"
@@ -186,15 +187,6 @@ fontSize: 12
 lineHeight: 1
 letterSpacing: 0
 `
-}
-
-func cleanup(path string) error {
-	// Delete the temp folder
-	if err := os.RemoveAll(path); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func readConfigFile() (string, error) {
