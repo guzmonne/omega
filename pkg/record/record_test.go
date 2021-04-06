@@ -38,14 +38,13 @@ func TestWriteRecording(t *testing.T) {
 	var expected = `config:
   command: /bin/bash
   cwd: /tmp
-  env:
-    values: []
-  cols: -1
-  rows: -1
+  env: []
+  cols: auto
+  rows: auto
   repeat: 0
   quality: 100
-  frameDelay: -1
-  maxIdleTimeout: -1
+  frameDelay: auto
+  maxIdleTimeout: auto
   cursorStyle: block
   fontFamily: Monaco, Lucida Console, Ubuntu Mono, Monospace
   fontSize: 12
