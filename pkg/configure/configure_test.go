@@ -3,14 +3,13 @@ package configure
 import (
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/andreyvit/diff"
-	"gopkg.in/yaml.v3"
 )
 
+// Removes anything on the path.
 func cleanup(path string) error {
 	// Delete the temp folder
 	if err := os.RemoveAll(path); err != nil {
@@ -20,32 +19,6 @@ func cleanup(path string) error {
 	return nil
 }
 
-
-// Struct to test the Environment Unmarshall and Marshall overrides.
-type TestEnvironment struct {
-	Env Environment `yaml:"env"`
-}
-// TestYAMLUnmarshal tests if the Unmarshall overrides for YAML
-// encoded strings works.
-func TestYAMLUnmarshal(t *testing.T) {
-	// If the value of environment is undefined is should return an empty `[]string`
-	var e TestEnvironment
-	yaml.Unmarshal([]byte("something: else"), &e)
-	if len(e.Env.Values) != 0 {
-		t.Errorf("len(e.Env.Values) = %d; expected 0", len(e.Env.Values))
-	}
-	// If the value is not a `map[string]string` it sould return an empty `[]string`
-	yaml.Unmarshal([]byte("env: else"), &e)
-	if len(e.Env.Values) != 0 {
-		t.Errorf("len(e.Env.Values) = %d; expected 0", len(e.Env.Values))
-	}
-	// If the value is a marshalled `Environment` struct it should parse it correctly.
-	env := &Environment{[]string{"something=awesome", "test=example"}}
-	yaml.Unmarshal([]byte("env:\n  values:\n    something: awesome\n    test: example"), &e)
-	if reflect.DeepEqual(e.Env.Values, env.Values) == false {
-		t.Errorf("e.Env.Values = %s; expected %s", e.Env.Values, env.Values)
-	}
-}
 // TestDefaultConfig tests if the function can create a new Config struct.
 func TestDefaultConfig(t *testing.T) {
 	_, err := DefaultConfig()
