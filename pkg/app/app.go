@@ -46,13 +46,6 @@ func CreateApp() cli.App {
 						Usage: "overwrites the project folder if defined",
 						EnvVars: []string{"OMEGA_PROJECT_FORCE"},
 					},
-					&cli.StringFlag{
-						Name: "cwd",
-						Aliases: []string{"c"},
-						Value: os.Getenv("HOME") + "/.omega",
-						Usage: "change the default config 'cwd' value",
-						EnvVars: []string{"OMEGA_PROJECT_CWD"},
-					},
 				},
 				Action: func(c *cli.Context) error {
 					if c.Bool("force") {
