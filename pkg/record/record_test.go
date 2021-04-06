@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -62,5 +63,42 @@ records:
 	}
 	if a, e := strings.TrimSpace(string(actual)), strings.TrimSpace(expected); a != e {
 		t.Errorf("Actual is different than expected:\n%v", diff.LineDiff(e, a))
+	}
+}
+
+func TestReadRecording(t *testing.T) {
+	recordingPath := "/tmp/recording.yml"
+	config := &configure.Config{
+		Command: "/example",
+		Cwd: "/example",
+		Env: configure.Environment{
+			Values: []string{"environment=variable"},
+		},
+	}
+	records := []Record{{0, "0"}, {1, "1"}}
+	recording := &Recording{*config, records}
+	// Make sure there are no existing files
+	if err := os.RemoveAll(recordingPath); err != nil {
+		t.Fatalf(err.Error())
+	}
+	// Clean everything after the test stops
+	defer func() {
+		if err := os.RemoveAll(recordingPath); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Write a sample config to the test file
+	if err := WriteRecording(recordingPath, config, records); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	// Read the recording and check that the contents match
+	content, err := ReadRecording(recordingPath)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if !reflect.DeepEqual(content, recording) {
+		t.Errorf("\nactual:\n\t%v\nexpected:\n\t%v", content, recording)
 	}
 }

@@ -2,6 +2,7 @@ package record
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -30,6 +31,7 @@ type Recording struct {
   // Records correspond to the list of stdout outputs generated during the recording.
 	Records []Record `yaml:"records,omitempty"`
 }
+
 // WriteRecording writes the Recording to a YAML file on the path provided by
 // the variable recordingPath.
 func WriteRecording(recordingPath string, config *configure.Config, records []Record) error {
@@ -52,6 +54,26 @@ func WriteRecording(recordingPath string, config *configure.Config, records []Re
 	}
 
 	return nil
+}
+
+// ReadRecording reads a recording from a file and returns its contents.
+func ReadRecording(recordingPath string) (*Recording, error) {
+	// Check if the config exists at `configPath`
+	if _, err := os.Stat(recordingPath); err != nil {
+		return &Recording{}, errors.New("Can't find a file at: " + recordingPath)
+	}
+	// Open the configuration file
+	configFile, err := ioutil.ReadFile(recordingPath)
+	if err != nil {
+		return &Recording{}, err
+	}
+	// Unmarshall the configuration file
+	recording := &Recording{}
+	if err := yaml.Unmarshal(configFile, &recording); err != nil {
+		return &Recording{}, err
+	}
+
+	return recording, nil
 }
 
 // RecordShell runs a pty shell that will record stdout into a recordings file.
