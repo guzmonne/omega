@@ -60,3 +60,8 @@ func (env *Environment) UnmarshalYAML(value *yaml.Node) error {
 
 	return nil
 }
+
+// MarshalYAML tells the YAML Marshal function how to encode the struct.
+func (env Environment) MarshalYAML() (interface{}, error) {
+	return env.Values, nil
+}

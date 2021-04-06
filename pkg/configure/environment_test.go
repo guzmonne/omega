@@ -69,3 +69,26 @@ func TestYAMLUnmarshal(t *testing.T) {
 		t.Errorf("actual:\n%s\nexpected:\n%s", &actual3, expected)
 	}
 }
+
+func TestEnvironmentMarshall(t *testing.T) {
+	type Test struct {
+		Env Environment `yaml:"env"`
+	}
+	// Should be encoded into a number if it is an int
+	var envs = []string{
+		"example=test",
+		"something=else",
+	}
+	var expected = "env:\n"
+	for _, env := range envs {
+		expected = expected + "    - " + env + "\n"
+	}
+	var decoded = &Test{Environment{envs}}
+	actual, err := yaml.Marshal(decoded);
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if expected != string(actual) {
+		t.Errorf("actual:\n%s\nexpected:\n%s", string(actual), expected)
+	}
+}
