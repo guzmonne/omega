@@ -20,17 +20,6 @@ func cleanup(path string) error {
 	return nil
 }
 
-func TestNewConfig(t *testing.T) {
-	config, err := NewConfig("./config.yml")
-	if err != nil {
-		t.Errorf("NewConfig() should't throw an error")
-	}
-	expected := "/tmp"
-	if config.Cwd != expected {
-		t.Errorf("config.Cwd = %s; expected %s", config.Cwd, expected)
-	}
-}
-
 func TestValidateConfigPath(t *testing.T) {
 	var path string
 	var expected string
@@ -134,7 +123,7 @@ const configFolder = "/tmp/test"
 const configPath = configFolder + "/" + CONFIG_FILENAME
 const dummyContent = "test"
 
-func createDefaultConfig() string {
+func createNewConfig() string {
 	cwd := os.Getenv("HOME") + "/.omega"
 	return `command: /bin/bash
 cwd: ` + cwd + `
@@ -183,7 +172,7 @@ func TestInit(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	// Should write the default config if the file is not present
-	defaultConfig := createDefaultConfig()
+	defaultConfig := createNewConfig()
 	if a, e := strings.TrimSpace(string(content)), strings.TrimSpace(defaultConfig); a != e {
 		t.Errorf("Actual is different than expected:\n%v", diff.LineDiff(e, a))
 	}

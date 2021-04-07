@@ -16,7 +16,7 @@ import (
 // WriteRecording function tests
 func TestWriteRecording(t *testing.T) {
 	var recordingPath = "/tmp/" + fmt.Sprint(rand.Int())
-	var config = configure.DefaultConfig()
+	var config = configure.NewConfig()
 	var records = []Record {
 		{0, "something"},
 		{1000, "else"},
@@ -119,7 +119,7 @@ func TestNewFrameDelayOptions(t *testing.T) {
 
 func TestAdjustFrameDelays(t *testing.T) {
 	options := NewFrameDelayOptions()
-	config := configure.DefaultConfig()
+	config := configure.NewConfig()
 	records := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
 	recording := &Recording{Config: *config, Records: records}
 	control := make([]Record, 2)

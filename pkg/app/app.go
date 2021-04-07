@@ -136,7 +136,7 @@ func CreateApp() cli.App {
 				},
 				Action: func(c *cli.Context) error {
 					// Create the configuration struct
-					config, err := configure.NewConfig(configPath)
+					config, err := configure.ReadConfig(configPath)
 					if err != nil {
 						log.Fatal(err)
 					}

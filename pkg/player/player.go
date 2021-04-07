@@ -23,7 +23,11 @@ type PlayOptions struct {
 
 // NewPlayOptions returns a default PlayOptions struct.
 func NewPlayOptions() PlayOptions {
-	return PlayOptions{true, false, 1}
+	return PlayOptions{
+		RealTiming: true,
+		Silent: false,
+		SpeedFactor: 1,
+	}
 }
 
 func Play (recordingPath string, options PlayOptions) error {
@@ -46,7 +50,7 @@ func Play (recordingPath string, options PlayOptions) error {
 		frameDelayOptions.MaxIdleTime = configure.Auto(-1)
 	}
 
-	// Override frameDelayOptions according to the PlayOptions
+	// Update SpeedFactor
 	frameDelayOptions.SpeedFactor = options.SpeedFactor
 
 	// Modify the delay between records according to FramDelayOptions
@@ -110,6 +114,7 @@ func showDoneMessage() {
 	magenta := color.New(color.FgHiMagenta).SprintFunc()
 
 	Clear()
+
 	fmt.Printf("\033[2;5H")
 	color.Green("Done")
 	fmt.Printf("\033[4;5H")

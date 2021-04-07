@@ -58,16 +58,17 @@ func NewFrameDelayOptions() FrameDelaysOptions {
 // AdjustFrameDelays adjusts the delays between records according to the
 // provided options.
 func (recording *Recording) AdjustFrameDelays(options FrameDelaysOptions) {
-	// Adjust the timing between records accordin to the options
 	for i := 0; i < len(recording.Records); i++ {
 		delay := configure.Auto((recording.Records)[i].Delay)
-		// Adjust the delay according to the frameDelay and maxIdleTime options
+
 		if options.FrameDelay != -1 {
 			recording.Records[i].Delay = int(options.FrameDelay)
-		} else if (options.MaxIdleTime != -1 && options.MaxIdleTime < delay) {
+		}
+
+		if (options.MaxIdleTime != -1 && options.MaxIdleTime < delay) {
 			recording.Records[i].Delay = int(options.MaxIdleTime)
 		}
-		// Apply the speed factor
+
 		recording.Records[i].Delay = recording.Records[i].Delay * options.SpeedFactor
 	}
 }

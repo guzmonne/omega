@@ -82,8 +82,8 @@ type Config struct {
   LetterSpacing int `yaml:"letterSpacing"`
 }
 
-// DefaultConfig returns a default Config struct
-func DefaultConfig() *Config {
+// NewConfig returns a default Config struct
+func NewConfig() *Config {
 	// Create a default config struct
 	return &Config{
 		Command: "/bin/bash",
@@ -101,29 +101,6 @@ func DefaultConfig() *Config {
 		LineHeight: 1,
 		LetterSpacing: 0,
 	}
-}
-
-// NewConfig returns a new CLI configuration with its default values.
-func NewConfig(configPath string) (*Config, error) {
-	config := DefaultConfig()
-
-	// Open config file
-	file, err := os.Open(configPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	// Init new YAML decoder
-	decoder := yaml.NewDecoder(file)
-
-	// Start YAML decoding from file
-	if err := decoder.Decode(&config); err != nil {
-		return nil, err
-	}
-
-	// Return the configuration object
-	return config, nil
 }
 
 // ReadConfig reads a config file and return its unmarshalled contents
@@ -205,11 +182,11 @@ func ValidateConfigPath(path string) error {
 }
 const CONFIG_FILENAME = "config.yml"
 
-func writeDefaultConfig(configPath string) error {
+func writeNewConfig(configPath string) error {
 	_, err := os.Stat(configPath);
 	if os.IsNotExist(err) {
 		// File doesn't exists
-		config := DefaultConfig()
+		config := NewConfig()
 		WriteConfig(configPath, *config)
 		color.Green("Configuration file created at: %s", configPath)
 	} else if os.IsExist(err) {
@@ -235,7 +212,7 @@ func Init(projectFolder string) error {
 		}
 	}
 
-	writeDefaultConfig(projectFolder + "/config.yml")
+	writeNewConfig(projectFolder + "/config.yml")
 
 	return nil
 }
