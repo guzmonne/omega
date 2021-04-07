@@ -4,6 +4,8 @@ go 1.15
 
 require (
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
+	github.com/chromedp/cdproto v0.0.0-20210323015217-0942afbea50e
+	github.com/chromedp/chromedp v0.6.10
 	github.com/creack/pty v1.1.11
 	github.com/fatih/color v1.10.0
 	github.com/oklog/ulid v1.3.1

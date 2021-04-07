@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
+	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/configure"
 	"gux.codes/omega/pkg/player"
 	"gux.codes/omega/pkg/record"
@@ -108,6 +109,19 @@ func CreateApp() cli.App {
 
 					if err := configure.Init(projectFolder); err != nil {
 						log.Fatal(err)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name: "screenshot",
+				Aliases: []string{"s"},
+				Usage: "take a screenshot of your recording",
+				UsageText: "omega screenshot [command options]",
+				Action: func(c *cli.Context) error {
+					if err := chrome.ScreenShot(); err != nil {
+						return err
 					}
 
 					return nil
