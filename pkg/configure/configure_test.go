@@ -20,14 +20,6 @@ func cleanup(path string) error {
 	return nil
 }
 
-// TestDefaultConfig tests if the function can create a new Config struct.
-func TestDefaultConfig(t *testing.T) {
-	_, err := DefaultConfig()
-	if err != nil {
-		t.Errorf("DefaultConfig() should't throw an error")
-	}
-}
-
 func TestNewConfig(t *testing.T) {
 	config, err := NewConfig("./config.yml")
 	if err != nil {

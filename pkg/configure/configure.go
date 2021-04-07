@@ -83,9 +83,9 @@ type Config struct {
 }
 
 // DefaultConfig returns a default Config struct
-func DefaultConfig() (*Config, error) {
+func DefaultConfig() *Config {
 	// Create a default config struct
-	config := &Config{
+	return &Config{
 		Command: "/bin/bash",
 		Cwd: os.Getenv("HOME") + "/" + ".omega",
 		Env: Environment{make([]string, 0)},
@@ -101,12 +101,11 @@ func DefaultConfig() (*Config, error) {
 		LineHeight: 1,
 		LetterSpacing: 0,
 	}
-	return config, nil
 }
 
 // NewConfig returns a new CLI configuration with its default values.
 func NewConfig(configPath string) (*Config, error) {
-	config, err := DefaultConfig()
+	config := DefaultConfig()
 
 	// Open config file
 	file, err := os.Open(configPath)
@@ -207,17 +206,16 @@ func ValidateConfigPath(path string) error {
 const CONFIG_FILENAME = "config.yml"
 
 func writeDefaultConfig(configPath string) error {
-	if _, err := os.Stat(configPath); err != nil {
+	_, err := os.Stat(configPath);
+	if os.IsNotExist(err) {
 		// File doesn't exists
-		config, err := DefaultConfig()
-		if err != nil {
-			return err
-		}
+		config := DefaultConfig()
 		WriteConfig(configPath, *config)
 		color.Green("Configuration file created at: %s", configPath)
-	} else {
-		// File exists
+	} else if os.IsExist(err) {
 		color.Blue("Configuration file already exists: %s", configPath)
+	} else if err != nil {
+		return err
 	}
 
 	return nil
