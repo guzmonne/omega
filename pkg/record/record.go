@@ -24,12 +24,52 @@ type Record struct {
   // Content of the record.
 	Content string `yaml:"content"`
 }
+
 // Recording is the output from a Recording Session
 type Recording struct {
   // Config used for the recording.
 	Config configure.Config `yaml:"config"`
   // Records correspond to the list of stdout outputs generated during the recording.
 	Records []Record `yaml:"records,omitempty"`
+}
+
+// FrameDelayOptions modify the timing between records.
+type FrameDelaysOptions struct {
+	// MaxIdleTime fixes the maximum delay between frames in ms.
+	// Ignored if the `frameDelay` option is set to `auto`.
+	// Set to `auto` to prevent limiting the max idle time.
+	MaxIdleTime configure.Auto
+	// FrameDelay sets a fiz delay between records in ms.
+	// If the value is "auto" use the actual recording delay.
+	FrameDelay configure.Auto
+	// SpeedFactor multiplies the delay between records.
+	SpeedFactor int
+}
+
+// NewFrameDelayOptions returns a default FrameDelaysOptions struct.
+func NewFrameDelayOptions() FrameDelaysOptions {
+	return FrameDelaysOptions{
+		MaxIdleTime: configure.Auto(-1),
+		FrameDelay: configure.Auto(-1),
+		SpeedFactor: 1,
+	}
+}
+
+// AdjustFrameDelays adjusts the delays between records according to the
+// provided options.
+func (recording *Recording) AdjustFrameDelays(options FrameDelaysOptions) {
+	// Adjust the timing between records accordin to the options
+	for i := 0; i < len(recording.Records); i++ {
+		delay := configure.Auto((recording.Records)[i].Delay)
+		// Adjust the delay according to the frameDelay and maxIdleTime options
+		if options.FrameDelay != -1 {
+			recording.Records[i].Delay = int(options.FrameDelay)
+		} else if (options.MaxIdleTime != -1 && options.MaxIdleTime < delay) {
+			recording.Records[i].Delay = int(options.MaxIdleTime)
+		}
+		// Apply the speed factor
+		recording.Records[i].Delay = recording.Records[i].Delay * options.SpeedFactor
+	}
 }
 
 // WriteRecording writes the Recording to a YAML file on the path provided by
