@@ -10,13 +10,13 @@ func TestNewPlayOptions(t *testing.T) {
 	var silent = false
 	// Should return a new PlayerOptions stuct with correct defaults
 	var actual = NewPlayOptions()
-	if actual.speedFactor != speedFactor {
-		t.Errorf("actual = %d; expected = %d", actual.speedFactor, speedFactor)
+	if actual.SpeedFactor != speedFactor {
+		t.Errorf("actual = %d; expected = %d", actual.SpeedFactor, speedFactor)
 	}
-	if actual.realTiming != realTiming {
-		t.Errorf("actual = %v; expected = %v", actual.realTiming, realTiming)
+	if actual.RealTiming != realTiming {
+		t.Errorf("actual = %v; expected = %v", actual.RealTiming, realTiming)
 	}
-	if actual.silent != silent {
-		t.Errorf("actual = %v; expected = %v", actual.silent, silent)
+	if actual.Silent != silent {
+		t.Errorf("actual = %v; expected = %v", actual.Silent, silent)
 	}
 }
