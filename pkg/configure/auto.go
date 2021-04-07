@@ -1,6 +1,8 @@
 package configure
 
 import (
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,8 +25,16 @@ func (auto *Auto) UnmarshalYAML(value *yaml.Node) error {
 // MarshalYAML tells the YAML Marshal function how to encode the struct.
 func (auto Auto) MarshalYAML() (interface{}, error) {
 	if auto == Auto(-1) {
-		return "auto", nil
+		return auto.String(), nil
 	}
 
 	return int(auto), nil
+}
+
+// String returns Auto's string representation.
+func (auto *Auto) String() string {
+	if *auto == Auto(-1) {
+		return "auto"
+	}
+	return fmt.Sprintf("%d", *auto)
 }

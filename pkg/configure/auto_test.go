@@ -68,3 +68,23 @@ func TestAutoMarshall(t *testing.T) {
 		t.Errorf("actual:\n%s\nexpected:\n%s", string(actual), expected)
 	}
 }
+
+func TestString(t *testing.T) {
+	t.Run("should be auto if it equals -1", func(t *testing.T) {
+		auto := Auto(-1)
+		expected := "auto"
+		actual := auto.String()
+		if actual != expected {
+			t.Errorf("actual = %s; expected = %s", actual, expected)
+		}
+	})
+	t.Run("should be the string representation of a number", func(t *testing.T) {
+		value := rand.Int()
+		auto := Auto(value)
+		expected := fmt.Sprintf("%d", value)
+		actual := auto.String()
+		if actual != expected {
+			t.Errorf("actual = %s; expected = %s", actual, expected)
+		}
+	})
+}
