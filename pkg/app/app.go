@@ -23,7 +23,7 @@ func CreateApp() cli.App {
 	var home = os.Getenv("HOME") + "/.omega"
 
 	app := &cli.App{
-		Name: "Omega",
+		Name: "Ωmega",
 		Usage: "CLI Recorder",
 		Action: func(c *cli.Context) error {
 			fmt.Println("Command not found. Try the -h or --help flags for more information.")
@@ -34,6 +34,7 @@ func CreateApp() cli.App {
 				Name: "play",
 				Usage: "reproduce a recording file",
 				Aliases: []string{"p"},
+				UsageText: "omega play [command options] RECORDING",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name: "realTiming",
@@ -49,10 +50,10 @@ func CreateApp() cli.App {
 						Usage: "silence the message before starting the recording",
 						EnvVars: []string{"OMEGA_PLAY_SILENT"},
 					},
-					&cli.IntFlag{
+					&cli.Float64Flag{
 						Name: "speedFactor",
 						Aliases: []string{"f"},
-						Value: 1,
+						Value: 1.0,
 						Usage: "applies a multiplier to each delay",
 						EnvVars: []string{"OMEGA_PLAY_SILENT"},
 					},
@@ -66,7 +67,7 @@ func CreateApp() cli.App {
 					options := &player.PlayOptions{
 						RealTiming: c.Bool("realTiming"),
 						Silent: c.Bool("silent"),
-						SpeedFactor: c.Int("speedFactor"),
+						SpeedFactor: c.Float64("speedFactor"),
 					}
 					player.Play(recordingPath, *options)
 
@@ -77,6 +78,7 @@ func CreateApp() cli.App {
 				Name: "init",
 				Aliases: []string{"i"},
 				Usage: "initialize the app",
+				UsageText: "omega init [command options]",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name: "path",
@@ -115,6 +117,7 @@ func CreateApp() cli.App {
 				Name: "record",
 				Aliases: []string{"r"},
 				Usage: "record a cli session",
+				UsageText: "omega record [command options]",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name: "config",

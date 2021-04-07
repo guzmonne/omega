@@ -103,7 +103,7 @@ func TestReadRecording(t *testing.T) {
 func TestNewFrameDelayOptions(t *testing.T) {
 	var maxIdleTime = configure.Auto(-1)
 	var frameDelay = configure.Auto(-1)
-	var speedFactor = 1
+	var speedFactor = 1.0
 	// Should return a new PlayerOptions stuct with correct defaults
 	var actual = NewFrameDelayOptions()
 	if actual.MaxIdleTime != maxIdleTime {
@@ -118,49 +118,90 @@ func TestNewFrameDelayOptions(t *testing.T) {
 }
 
 func TestAdjustFrameDelays(t *testing.T) {
-	options := NewFrameDelayOptions()
-	config := configure.NewConfig()
-	records := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
-	recording := &Recording{Config: *config, Records: records}
-	control := make([]Record, 2)
-	_ = copy(control, records)
+	t.Run("should do nothing if the default options are provided", func(t *testing.T) {
+		options := NewFrameDelayOptions()
+		config := configure.NewConfig()
+		records := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
+		recording := &Recording{Config: *config, Records: records}
+		control := make([]Record, 2)
+		_ = copy(control, records)
 
-	// Should do nothing if the default options are provided
-	recording.AdjustFrameDelays(options)
-	if !reflect.DeepEqual(records, control) {
-		t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
-	}
+		// Should do nothing if the default options are provided
+		recording.AdjustFrameDelays(options)
+		if !reflect.DeepEqual(records, control) {
+			t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
+		}
+	})
 
-	// Should apply the frameDelay provided by the options if is not -1.
-	var frameDelay = 100
-	options.FrameDelay = configure.Auto(frameDelay)
-	for i := range control {
-		control[i].Delay = frameDelay
-	}
-	recording.AdjustFrameDelays(options)
-	if !reflect.DeepEqual(records, control) {
-		t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
-	}
+	t.Run("should apply the frameDelay provided by the options if it's not -1", func(t *testing.T) {
+		var frameDelay = 100
+		config := configure.NewConfig()
+		options := NewFrameDelayOptions()
+		options.FrameDelay = configure.Auto(frameDelay)
+		records := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
+		recording := &Recording{Config: *config, Records: records}
+		control := make([]Record, 2)
+		_ = copy(control, records)
+		for i := range control {
+			control[i].Delay = frameDelay
+		}
+		recording.AdjustFrameDelays(options)
+		if !reflect.DeepEqual(records, control) {
+			t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
+		}
+	})
 
-	// Should max the delay if maxIdleDelay is not -1
-	var maxIdleDelay = 50
-	options.FrameDelay = configure.Auto(-1)
-	options.MaxIdleTime = configure.Auto(maxIdleDelay)
-	for i := range control {
-		control[i].Delay = maxIdleDelay
-	}
-	recording.AdjustFrameDelays(options)
-	if !reflect.DeepEqual(records, control) {
-		t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
-	}
-	// Should multiply the delay by the speed factor
-	var speedFactor = 2
-	options.SpeedFactor = speedFactor
-	for i := range control {
-		control[i].Delay = maxIdleDelay * speedFactor
-	}
-	recording.AdjustFrameDelays(options)
-	if !reflect.DeepEqual(records, control) {
-		t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
-	}
+	t.Run("should max the delay if maxIdleDelay is not -1", func(t *testing.T) {
+		var maxIdleDelay = 50
+		config := configure.NewConfig()
+		options := NewFrameDelayOptions()
+		options.MaxIdleTime = configure.Auto(maxIdleDelay)
+		records := []Record{{Delay: 100, Content: "1"}, {Delay: 200, Content: "2"}}
+		recording := &Recording{Config: *config, Records: records}
+		control := make([]Record, 2)
+		_ = copy(control, records)
+		for i := range control {
+			control[i].Delay = maxIdleDelay
+		}
+		recording.AdjustFrameDelays(options)
+		if !reflect.DeepEqual(records, control) {
+			t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
+		}
+	})
+
+	t.Run("should multiply the delay by the speed factor", func(t *testing.T) {
+		var speedFactor = 2.0
+		config := configure.NewConfig()
+		options := NewFrameDelayOptions()
+		options.SpeedFactor = speedFactor
+		records := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
+		recording := &Recording{Config: *config, Records: records}
+		control := make([]Record, 2)
+		_ = copy(control, records)
+		for i := range control {
+			control[i].Delay = int(float64(control[i].Delay) * speedFactor)
+		}
+		recording.AdjustFrameDelays(options)
+		if !reflect.DeepEqual(records, control) {
+			t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
+		}
+	})
+
+	t.Run("should multiply the delay by the speed factor", func(t *testing.T) {
+		var speedFactor = 0.5
+		config := configure.NewConfig()
+		options := NewFrameDelayOptions()
+		options.SpeedFactor = speedFactor
+		records := []Record{{Delay: 10, Content: "1"}, {Delay: 100, Content: "2"}}
+		recording := &Recording{Config: *config, Records: records}
+		control := make([]Record, 2)
+		_ = copy(control, records)
+		for i := range control {
+			control[i].Delay = int(float64(control[i].Delay) * speedFactor)
+		}
+		recording.AdjustFrameDelays(options)
+		if !reflect.DeepEqual(records, control) {
+			t.Errorf("Records mismatch.\nactual:\n%v\nexpected:\n%v", records, control)
+		}
+	})
 }

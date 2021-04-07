@@ -43,7 +43,7 @@ type FrameDelaysOptions struct {
 	// If the value is "auto" use the actual recording delay.
 	FrameDelay configure.Auto
 	// SpeedFactor multiplies the delay between records.
-	SpeedFactor int
+	SpeedFactor float64
 }
 
 // NewFrameDelayOptions returns a default FrameDelaysOptions struct.
@@ -51,7 +51,7 @@ func NewFrameDelayOptions() FrameDelaysOptions {
 	return FrameDelaysOptions{
 		MaxIdleTime: configure.Auto(-1),
 		FrameDelay: configure.Auto(-1),
-		SpeedFactor: 1,
+		SpeedFactor: 1.0,
 	}
 }
 
@@ -69,7 +69,7 @@ func (recording *Recording) AdjustFrameDelays(options FrameDelaysOptions) {
 			recording.Records[i].Delay = int(options.MaxIdleTime)
 		}
 
-		recording.Records[i].Delay = recording.Records[i].Delay * options.SpeedFactor
+		recording.Records[i].Delay = int(float64(recording.Records[i].Delay) * options.SpeedFactor)
 	}
 }
 

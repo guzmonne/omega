@@ -18,7 +18,7 @@ type PlayOptions struct {
 	// Silent eliminates the recording message before playback.
 	Silent bool
 	// SpeedFactor applies a custom factor between record delays.
-	SpeedFactor int
+	SpeedFactor float64
 }
 
 // NewPlayOptions returns a default PlayOptions struct.
@@ -26,7 +26,7 @@ func NewPlayOptions() PlayOptions {
 	return PlayOptions{
 		RealTiming: true,
 		Silent: false,
-		SpeedFactor: 1,
+		SpeedFactor: 1.0,
 	}
 }
 
@@ -97,7 +97,7 @@ func showPlaybackMessage(recordingPath string, options record.FrameDelaysOptions
 	fmt.Printf("\nPlayback options:\n")
 	fmt.Printf(("\tFrame Delay:\t%s\n"), options.FrameDelay.String())
 	fmt.Printf(("\tMax Idle Time:\t%s\n"), options.MaxIdleTime.String())
-	fmt.Printf(("\tSpeed Factor:\t%d\n"), options.SpeedFactor)
+	fmt.Printf(("\tSpeed Factor:\t%.2f\n"), options.SpeedFactor)
 	fmt.Printf("\n---\n\n")
 	fmt.Printf("Press %s to exit the recording at any time\n", red("CTRL+C"))
 	for i := 5; i > -1; i-- {
@@ -118,5 +118,5 @@ func showDoneMessage() {
 	fmt.Printf("\033[2;5H")
 	color.Green("Done")
 	fmt.Printf("\033[4;5H")
-	fmt.Printf("Thank you for using %s!\n", magenta("Omega"))
+	fmt.Printf("Thank you for using %s!\n", magenta("Ωmega"))
 }
