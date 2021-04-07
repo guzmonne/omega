@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,7 +18,6 @@ func CreateApp() cli.App {
 	var configPath string
 	var outputPath string
 	var projectFolder string
-	var recordingPath string
 
 	var ulid = utils.ULID()
 	var home = os.Getenv("HOME") + "/.omega"
@@ -35,18 +35,40 @@ func CreateApp() cli.App {
 				Usage: "reproduce a recording file",
 				Aliases: []string{"p"},
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name: "recording",
+					&cli.BoolFlag{
+						Name: "realTiming",
 						Aliases: []string{"r"},
-						Value: home,
-						Usage: "recording path",
-						Destination: &recordingPath,
-						EnvVars: []string{"OMEGA_RECORDING_PATH"},
+						Value: false,
+						Usage: "use the original timing between records",
+						EnvVars: []string{"OMEGA_PLAY_REAL_TIMING"},
+					},
+					&cli.BoolFlag{
+						Name: "silent",
+						Aliases: []string{"s"},
+						Value: false,
+						Usage: "silence the message before starting the recording",
+						EnvVars: []string{"OMEGA_PLAY_SILENT"},
+					},
+					&cli.IntFlag{
+						Name: "speedFactor",
+						Aliases: []string{"f"},
+						Value: 1,
+						Usage: "applies a multiplier to each delay",
+						EnvVars: []string{"OMEGA_PLAY_SILENT"},
 					},
 				},
 				Action: func(c *cli.Context) error {
-					options := player.NewPlayOptions()
-					player.Play(recordingPath, options)
+					var recordingPath string
+					if c.NArg() == 0 {
+						return errors.New("No recording file was supplied")
+					}
+					recordingPath = c.Args().Get(0)
+					options := &player.PlayOptions{
+						RealTiming: c.Bool("realTiming"),
+						Silent: c.Bool("silent"),
+						SpeedFactor: c.Int("speedFactor"),
+					}
+					player.Play(recordingPath, *options)
 
 					return nil
 				},
