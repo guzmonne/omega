@@ -117,8 +117,8 @@ func ReadRecording(recordingPath string) (*Recording, error) {
 	return recording, nil
 }
 
-// RecordShell runs a pty shell that will record stdout into a recordings file.
-func RecordShell(recordingPath string, config *configure.Config) error {
+// Shell runs a pty shell that will record stdout into a recordings file.
+func Shell(recordingPath string, config *configure.Config) error {
 	// Create a command
 	c := exec.Command(config.Command)
 
