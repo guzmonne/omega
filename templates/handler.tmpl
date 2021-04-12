@@ -41,7 +41,7 @@
       $title.textContent = i + " " + diff
       send(i)
       i++
-      if (i < 600) {
+      if (i < 100) {
         requestAnimationFrame(animate)
       } else {
         setTimeout(() => send(i + 1), 1000)

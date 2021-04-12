@@ -2,21 +2,19 @@ package record
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
-	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
-	"github.com/gobs/simplejson"
-	"github.com/raff/godet"
+	"github.com/mafredri/cdp"
+	"github.com/mafredri/cdp/devtool"
+	"github.com/mafredri/cdp/protocol/page"
+	"github.com/mafredri/cdp/rpcc"
+	"golang.org/x/sync/errgroup"
 	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/utils"
 )
@@ -41,23 +39,25 @@ func NewAnimationOptions() *AnimationOptions {
 }
 
 func Chrome() error {
-	var remote *godet.RemoteDebugger
-	var err error
-
-	err = chrome.Start()
-	if err != nil {
+	// Open Chrome in headless mode
+	if err := chrome.Start(); err != nil {
 		return err
 	}
 
-	// Start the HTTP server
-	options := NewAnimationOptions()
-	go startServer(options)
+	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	defer cancel()
 
-	for i := 0; i < 30; i++ {
+	// Create the devtools connnection
+	var devt *devtool.DevTools
+	var pt *devtool.Target
+	var err error
+	for i := 0; i < 10; i++ {
 		if i > 0 {
 			time.Sleep(500 * time.Millisecond)
 		}
-		remote, err = godet.Connect("localhost:9222", false)
+
+		devt = devtool.New("http://localhost:9222")
+		pt, err = devt.Get(ctx, devtool.Page)
 		if err == nil {
 			break
 		}
@@ -65,245 +65,225 @@ func Chrome() error {
 	if err != nil {
 		return err
 	}
-	defer remote.Close()
 
-	// Get list of open tabs
-	tabs, err := remote.TabList("")
+	conn, err := rpcc.DialContext(ctx, pt.WebSocketDebuggerURL)
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
-	// navigate in existing tab
-	_ = remote.ActivateTab(tabs[0])
+	// Create a new CDP client that uses conn.
+	c := cdp.NewClient(conn)
 
-	// Enable event processing
-	remote.PageEvents(true)
-	remote.AllEvents(true)
+	// Give enough capacity to avoid blocking any event listeners
+	abort := make(chan error, 2)
 
-	exception := make(chan bool, 1)
-	close := make(chan bool, 1)
-
-	remote.CallbackEvent("Page.screencastFrame", func (params godet.Params) {
-		message, err := parseParams(params)
-		if err != nil {
-			fmt.Printf("%s parseParams\n%s\n", utils.BoxRed("Error:"), err.Error())
-			exception <- true
+	// Watch the abort channel
+	go func() {
+		select {
+		case <- ctx.Done():
+		case err := <-abort:
+			fmt.Printf("aborted: %s\n", err.Error())
+			cancel()
 		}
-		if message.Type != "command" {
-			fmt.Printf("%s %s\n", utils.BoxGreen(message.Type), message.Message)
-			go takeScreenshot(remote)
-			return
-		}
-		fmt.Printf("%s %s\n", utils.BoxRed(message.Type), message.Message)
-		switch message.Action {
-		case "close":
-			close <- true
-		}
-	})
+	}()
 
-	urlstr := fmt.Sprintf("http://localhost:%d/handler", options.Port)
-	_, err = remote.Navigate(urlstr)
-	if err != nil {
+	if err = abortOnErrors(ctx, c, abort); err != nil {
 		return err
 	}
 
-	p, err := remote.SendRequest("Page.startScreenCast", godet.Params{})
-	if err != nil {
+	// Enable all the domain events that we're interested in.
+	if err = runBatch(
+		func() error { return c.DOM.Enable(ctx) },
+		func() error { return c.Network.Enable(ctx, nil) },
+		func() error { return c.Page.Enable(ctx) },
+		func() error { return c.Runtime.Enable(ctx) },
+		func() error { return c.Console.Enable(ctx) },
+
+	); err != nil {
 		return err
 	}
-
-	fmt.Println(p)
-
-	select {
-	case <- exception:
-	case <- close:
-	}
-
-	return nil
-}
-
-func documentNode(remote *godet.RemoteDebugger) (int, error) {
-	res, err := remote.GetDocument()
-	if err != nil {
-		return -1, err
-	}
-
-	doc := simplejson.AsJson(res)
-	return doc.GetPath("root", "nodeId").MustInt(-1), nil
-}
-
-
-func takeScreenshot(remote *godet.RemoteDebugger) {
-	remote.SaveScreenshot(utils.ULID() + ".png", 0644, 0, true)
-}
-
-func startScreencast(options *AnimationOptions) chromedp.Tasks {
-	urlstr := fmt.Sprintf("http://localhost:%d/handler", options.Port)
-	return chromedp.Tasks{
-		chromedp.Navigate(urlstr),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			page.StartScreencast().Do(ctx)
-
-			chromedp.ListenTarget(ctx, func(ev interface{}) {
-				switch ev := ev.(type) {
-				case *runtime.EventConsoleAPICalled:
-					go handleEventConsoleApiCalled(ev)
-				case *page.EventScreencastVisibilityChanged:
-				case *page.EventScreencastFrame:
-					go handleEventScreencastFrame(ev)
-					page.ScreencastFrameAck(ev.SessionID).Do(ctx)
-				}
-
-			})
-
-			return nil
-		}),
-	}
-}
-
-func handleEventScreencastFrame(ev *page.EventScreencastFrame) {
-	unbased, err := base64.StdEncoding.DecodeString(ev.Data)
-	if err != nil {
-		fmt.Printf("%s base64.StdEncoding.DecodeString\n%s", utils.BoxRed("Error:"), err.Error())
-		//exception <- true
-	}
-
-	if err := ioutil.WriteFile(utils.ULID() + ".png", unbased, 0o644); err != nil {
-		fmt.Printf("%s ioutil.WriteFile\n%s", utils.BoxRed("Error:"), err.Error())
-		//exception <- true
-	}
-}
-
-func parseParams(params godet.Params) (AnimationMessage, error) {
-	message := AnimationMessage{}
-	l := []string{}
-	for _, a := range params["args"].([]interface{}) {
-		arg := a.(map[string]interface{})
-		if arg["value"] != nil {
-			l = append(l, arg["value"].(string))
-		} else {
-			l = append(l, arg["type"].(string))
-		}
-	}
-	value := l[0]
-	if err := json.Unmarshal([]byte(value), &message); err != nil {
-		return message, err
-	}
-	return message, nil
-}
-
-func handleEventConsoleApiCalled(ev *runtime.EventConsoleAPICalled) {
-	if ev.Type != "info" || len(ev.Args) != 1 {
-		return
-	}
-	message := AnimationMessage{}
-	value, err := strconv.Unquote(string(ev.Args[0].Value))
-	if err != nil {
-		fmt.Printf("%s strconv.Unquote\n%s", utils.BoxRed("Error:"), err.Error())
-		//exception <- true
-	}
-	if err := json.Unmarshal([]byte(value), &message); err != nil {
-		fmt.Printf("%s json.Unmarshal\n%s", utils.BoxRed("Error:"), err.Error())
-		//exception <- true
-	}
-	if message.Type != "command" {
-		fmt.Printf("%s %s\n", utils.BoxGreen(message.Type), message.Message)
-		return
-	}
-	fmt.Printf("%s %s\n", utils.BoxRed(message.Type), message.Message)
-	switch message.Action {
-	case "close":
-		//close <- true
-	}
-}
-
-/*
-func Chrome() error {
-	ctx, cancel := chromedp.NewContext(
-		context.Background(),
-	)
-	defer cancel()
 
 	// Start the HTTP server
 	options := NewAnimationOptions()
 	go startServer(options)
 
-	// Create signal channels to stop the execution when an Exception
-	// is thrown or when the animation is done.
-	exception := make(chan bool, 1)
-	close := make(chan bool, 1)
-
-	chromedp.ListenTarget(ctx, func(ev interface{}) {
-		switch ev := ev.(type) {
-		case *runtime.EventConsoleAPICalled:
-			if ev.Type != "info" || len(ev.Args) != 1 {
-				break
-			}
-			message := AnimationMessage{}
-			value, err := strconv.Unquote(string(ev.Args[0].Value))
-			if err != nil {
-				fmt.Printf("%s strconv.Unquote\n%s", utils.BoxRed("Error:"), err.Error())
-				exception <- true
-				break
-			}
-			if err := json.Unmarshal([]byte(value), &message); err != nil {
-				fmt.Printf("%s json.Unmarshal\n%s", utils.BoxRed("Error:"), err.Error())
-				exception <- true
-				break
-			}
-			if message.Type == "command" {
-				fmt.Printf("%s %s\n", utils.BoxRed(message.Type), message.Message)
-				switch message.Action {
-				case "start":
-					page.StartScreencast()
-				case "close":
-					page.StopScreencast()
-					close <- true
-				}
-			} else {
-				fmt.Printf("%s %s\n", utils.BoxGreen(message.Type), message.Message)
-			}
-		case *runtime.EventExceptionThrown:
-			s := ev.ExceptionDetails.Error()
-			fmt.Printf("* %s \n", s)
-			exception <- true
-		case *page.EventScreencastFrame:
-			go func() {
-				unbased, err := base64.StdEncoding.DecodeString(ev.Data)
-				if err != nil {
-					fmt.Printf("%s base64.StdEncoding.DecodeString\n%s", utils.BoxRed("Error:"), err.Error())
-					exception <- true
-				}
-
-				if err := ioutil.WriteFile(utils.ULID() + ".png", unbased, 0o644); err != nil {
-					fmt.Printf("%s ioutil.WriteFile\n%s", utils.BoxRed("Error:"), err.Error())
-					exception <- true
-				}
-			}()
-			page.ScreencastFrameAck(ev.SessionID).Do(ctx)
-		}
-	})
-
-	target.
-
-	urlstr := fmt.Sprintf("http://localhost:%d/handler", options.Port)
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(urlstr),
-	); err != nil {
+	// Create a messageAdded client
+	messageAdded, err := c.Console.MessageAdded(ctx)
+	if err != nil {
 		return err
 	}
 
-	select {
-	case <- exception:
-	case <- close:
+	// Handle added messages
+	go func() {
+		defer messageAdded.Close()
+
+		for {
+			ev, err := messageAdded.Recv()
+			if err != nil {
+				log.Printf("Failed to receive MessageAdded: %v", err)
+				return
+			}
+			fmt.Printf("Added message [%s]: %s\n", ev.Message.Level, ev.Message.Text)
+		}
+	}()
+
+	// Navigate to handler URL
+	domLoadTimeout := 5 * time.Second
+	urlstr := fmt.Sprintf("http://localhost:%d/handler", options.Port)
+	err = navigate(ctx, c.Page, urlstr, domLoadTimeout)
+	if err != nil {
+		return err
 	}
 
-	ctx.Done()
+	// Create a screencastFrame client
+	screencastFrame, err := c.Page.ScreencastFrame(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Handle sceencast frames
+	go func() {
+		defer screencastFrame.Close()
+
+		for {
+			ev, err := screencastFrame.Recv()
+			if err != nil {
+				log.Printf("Failed to receive ScreencastFrame: %v", err)
+				return
+			}
+
+			err = c.Page.ScreencastFrameAck(ctx, page.NewScreencastFrameAckArgs(ev.SessionID))
+			if err != nil {
+				log.Printf("Failed to ack ScreencastFrame: %v", err)
+				return
+			}
+
+			// Write the frame to file (without blocking).
+			go func() {
+				name := utils.ULID() + ".png"
+				err = ioutil.WriteFile(name, ev.Data, 0644)
+				if err != nil {
+					log.Printf("Failed to write ScreencastFrame to %q: %v", name, err)
+				}
+			}()
+		}
+	}()
+
+	screencastArgs := page.NewStartScreencastArgs().
+		SetEveryNthFrame(1).
+		SetFormat("png")
+	err = c.Page.StartScreencast(ctx, screencastArgs)
+	if err != nil {
+		return err
+	}
+
+	// Random delay for our screencast.
+	time.Sleep(5 * time.Second)
+
+	err = c.Page.StopScreencast(ctx)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-*/
+// navigate to the URL and wait for DOMContentEventFired. An error is
+// returned if timeout happens before DOMContentEventFired.
+func navigate(ctx context.Context, pageClient cdp.Page, url string, timeout time.Duration) error {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Make sure Page events are enabled.
+	err := pageClient.Enable(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Open client for DOMContentEventFired to block until DOM has fully loaded.
+	domContentEventFired, err := pageClient.DOMContentEventFired(ctx)
+	if err != nil {
+		return err
+	}
+	defer domContentEventFired.Close()
+
+	_, err = pageClient.Navigate(ctx, page.NewNavigateArgs(url))
+	if err != nil {
+		return err
+	}
+
+	_, err = domContentEventFired.Recv()
+	return err
+}
+
+// runBatchFunc is the function signature for runBatch.
+type runBatchFunc func() error
+
+// runBatch runs all functions simultaneously and waits until
+// execution has completed or an error is encountered.
+func runBatch(fn ...runBatchFunc) error {
+	eg := errgroup.Group{}
+	for _, f := range fn {
+		eg.Go(f)
+	}
+	return eg.Wait()
+}
+
+func abortOnErrors(ctx context.Context, c *cdp.Client, abort chan<- error) error {
+	exceptionThrown, err := c.Runtime.ExceptionThrown(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadingFailed, err := c.Network.LoadingFailed(ctx)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer exceptionThrown.Close() // Cleanup.
+		defer loadingFailed.Close()
+		for {
+			select {
+			// Check for exceptions so we can abort as soon
+			// as one is encountered.
+			case <-exceptionThrown.Ready():
+				ev, err := exceptionThrown.Recv()
+				if err != nil {
+					// This could be any one of: stream closed,
+					// connection closed, context deadline or
+					// unmarshal failed.
+					abort <- err
+					return
+				}
+
+				// Ruh-roh! Let the caller know something went wrong.
+				abort <- ev.ExceptionDetails
+
+			// Check for non-canceled resources that failed
+			// to load.
+			case <-loadingFailed.Ready():
+				ev, err := loadingFailed.Recv()
+				if err != nil {
+					abort <- err
+					return
+				}
+
+				// For now, most optional fields are pointers
+				// and must be checked for nil.
+				canceled := ev.Canceled != nil && *ev.Canceled
+
+				if !canceled {
+					abort <- fmt.Errorf("request %s failed: %s", ev.RequestID, ev.ErrorText)
+				}
+			}
+		}
+	}()
+	return nil
+}
+
 func startServer(options *AnimationOptions) {
 	// Force logs in color
 	gin.ForceConsoleColor()
