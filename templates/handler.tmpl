@@ -1,0 +1,59 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>Ωmega - Chrome</title>
+  <meta name="description" content="Chrome animation recorder">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--<link rel="manifest" href="site.webmanifest"> -->
+  <!--<link rel="apple-touch-icon" href="icon.png"> -->
+  <!-- Place favicon.ico in the root directory -->
+
+  <!-- <link rel="stylesheet" href="css/normalize.css"> -->
+  <!-- <link rel="stylesheet" href="css/style.css"> -->
+
+  <!-- Custom Styles -->
+  <style>
+
+  </style>
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+  <!-- HTML Body -->
+  <div id="#root">
+    <h1 id="title"></h1>
+  </div>
+
+  <!-- Custom Script -->
+  {{ template "communication.tmpl" . }}
+  <script>
+    var i = 0
+    var timestamp = Date.now()
+    var $title = document.getElementById("title")
+
+    function animate() {
+      var now = Date.now()
+      var diff = now - timestamp
+      timestamp = now
+      $title.textContent = i + " " + diff
+      send(i)
+      i++
+      if (i < 600) {
+        requestAnimationFrame(animate)
+      } else {
+        setTimeout(() => send(i + 1), 1000)
+        setTimeout(() => send(i + 2), 2000)
+        setTimeout(() => send(i + 3), 3000)
+        setTimeout(() => close(), 3000)
+      }
+    }
+
+    start()
+    requestAnimationFrame(animate)
+  </script>
+</body>
+
+</html>

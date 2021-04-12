@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/oklog/ulid"
 )
 
@@ -31,9 +32,28 @@ func Touch(filePath string, content string) error {
 
 	return nil
 }
-
+// ULID returns a valid pseudo-random ULID id.
 func ULID() string {
 	t := time.Now()
 	entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
 	return ulid.MustNew(ulid.Timestamp(t), entropy).String()
 }
+
+var bgGreen = color.New(color.BgGreen).SprintFunc()
+var bgRed = color.New(color.BgRed).SprintFunc()
+var bgBlue = color.New(color.BgBlue).SprintFunc()
+
+// BoxGreen returns a string inside a green box
+func BoxGreen(content string) string {
+	return bgGreen(" " + content + " ")
+}
+
+// BoxRed returns a string inside a red box
+func BoxRed(content string) string {
+	return bgRed(" " + content + " ")
+}
+// BoxBlue returns a string inside a blue box
+func BoxBlue(content string) string {
+	return bgBlue(" " + content + " ")
+}
+
