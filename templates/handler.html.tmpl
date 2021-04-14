@@ -1,0 +1,332 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>Ωmega - Chrome handler</title>
+  <meta name="description" content="Chrome animation recorder">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--<link rel="manifest" href="site.webmanifest"> -->
+  <!--<link rel="apple-touch-icon" href="icon.png"> -->
+  <!-- Place favicon.ico in the root directory -->
+
+  <!-- <link rel="stylesheet" href="css/normalize.css"> -->
+  <!-- <link rel="stylesheet" href="css/style.css"> -->
+
+  <!-- Custom Styles -->
+  <style>
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+/* display the svg and input in a centered column */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fffaf0;
+}
+svg {
+  display: block;
+  width: 200px;
+  height: auto;
+}
+
+/* style the input of type range to highlight two dots atop a thin line
+the whole thing is optimized for chrome and should be carefully considered for cross-browser support
+*/
+input[type="range"] {
+  margin-top: 2.5rem;
+  width: 300px;
+  -webkit-appearance: none;
+  height: 1rem;
+  background: transparent;
+  color: #0d3730;
+  position: relative;
+  cursor: e-resize;
+}
+/* circle making up the thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0d3730;
+}
+/* thin line  */
+input[type="range"]:before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  background: #0d3730;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: -5;
+}
+/* ticks added at either end */
+input[type="range"]:after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  border-left: 2px solid #0d3730;
+  border-right: 2px solid #0d3730;
+  z-index: -5;
+}
+
+  </style>
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body style="background-color: rgba(0, 0, 0, 0)">
+  <!-- HTML Body -->
+  <!-- specify a viewBox larger than the actual shape, to allocate space for the bomb as it gets scaled beyond its normal size -->
+<svg viewBox="-30 -20 150 120" width="150" height="120">
+  <!-- path used by anime.js to trace the movement of the fuse -->
+  <path
+      id="motion-path"
+      fill="none"
+      stroke="none"
+      d="M 0 0 v 5 a 10 10 0 0 1 -20 0 a 18 18 0 0 0 -36 0 v 30">
+  </path>
+
+  <g>
+      <g transform="translate(30 58)">
+          <g id="rupee">
+              <path
+                  fill="#458588"
+                  transform="scale(0.8)"
+                  d="M 0 -24 l 12 12 v 20 l -12 12 l -12 -12 v -20 z">
+              </path>
+              <path
+                  fill="#65b3b8"
+                  transform="scale(0.5)"
+                  d="M 0 -24 l 12 12 v 20 l -12 12 l -12 -12 v -20 z">
+              </path>
+          </g>
+      </g>
+
+      <g transform="translate(86 14)">
+          <path
+              id="fuse"
+              fill="none"
+              stroke="#458588"
+              stroke-width="2"
+              d="M 0 0 v 5 a 10 10 0 0 1 -20 0 a 18 18 0 0 0 -36 0 v 30">
+          </path>
+          <!-- translate the #spark group -->
+          <g id="spark">
+              <!-- scale the #ember path -->
+              <path
+                  id="ember"
+                  transform="scale(1.75)"
+                  stroke="#F3A37C"
+                  stroke-width="1.25"
+                  d="M -4.5 -1.5 h 3 l 1.5 -3 l 1.5 3 h 3 l -2.5 2.5 l 1.5 3.25 l -3.5 -2 l -3.5 2 l 1.5 -3.25 l -2.5 -2.5z"
+                  fill="#FFF9EE">
+              </path>
+              <!-- scale #sparkles group -->
+              <g
+                  id="sparkles"
+                  transform="scale(0)">
+                  <g
+                      fill="#F3A37C">
+                      <circle
+                          transform="rotate(10) translate(12 0)"
+                          cx="0"
+                          cy="0"
+                          r="2">
+                      </circle>
+                      <circle
+                          transform="rotate(170) translate(12 0)"
+                          cx="0"
+                          cy="0"
+                          r="2">
+                      </circle>
+                      <circle
+                          transform="rotate(90) translate(12 0)"
+                          cx="0"
+                          cy="0"
+                          r="2">
+                      </circle>
+                      <circle
+                          transform="rotate(-60) translate(13 0)"
+                          cx="0"
+                          cy="0"
+                          r="2">
+                      </circle>
+                      <circle
+                          transform="rotate(-120) translate(13 0)"
+                          cx="0"
+                          cy="0"
+                          r="1.75">
+                      </circle>
+                  </g>
+              </g>
+          </g>
+      </g>
+
+
+      <g transform="translate(30 56)"><!-- translate to modify the transform origin and scale the bomb from its center -->
+          <!-- scale the #bomb group -->
+          <g
+              id="bomb"
+              fill="#0D3730">
+              <circle
+                  cx="0"
+                  cy="0"
+                  r="30">
+              </circle>
+              <path
+                  fill="#092E2B"
+                  transform="rotate(30)"
+                  d="M 0 -30 a 30 30 0 0 1 0 60 a 31 31 0 0 0 0 -60">
+              </path>
+
+              <circle
+                  fill="none"
+                  stroke="#458588"
+                  stroke-width="1.5"
+                  cx="0"
+                  cy="0"
+                  r="15">
+              </circle>
+              <path
+                  d="M 0 -8.5 l 8 14 h -16 z"
+                  fill="#FFF9EE">
+              </path>
+              <path
+                  transform="scale(0.5) rotate(180)"
+                  d="M 0 -11 l 8 14 h -16 z"
+                  fill="#0D3730">
+              </path>
+
+              <rect
+                  x="-12"
+                  y="-37"
+                  width="24"
+                  height="10">
+              </rect>
+          </g>
+      </g>
+  </g>
+</svg>
+
+<input type="range" min="0" max="100" value="0" />
+
+  <!-- Libraries -->
+  <script src="/assets/anime.min.js"></script>
+  <!-- Communication Script -->
+  {{ template "communication.html.tmpl" . }}
+  <!-- Custom Script -->
+  <script>
+// Start recording
+Omega.start()
+// Stop recording in 5 seconds
+setTimeout(() => Omega.stop(), 10000)
+/* globals anime */
+// target the input element
+const input = document.querySelector('input');
+
+// as the timeline progresses update the value of the input
+const timeline = anime.timeline({
+  update: ({progress}) => input.value = progress
+});
+
+// function called following the input event
+// update the timeline to show the percentage matching the value of the input
+function handleInput() {
+  const {value} = this;
+  timeline.seek(timeline.duration * value / 100);
+}
+
+input.addEventListener('input', handleInput);
+// following the mousedown event pause the animation
+input.addEventListener('mousedown', () => timeline.pause());
+// following the mouseup even play the animation
+input.addEventListener('mouseup', () => timeline.play());
+
+/* add the animations to the timeline
+! use negative values as second argument of the .add() function to specify overlaps between animations
+*/
+
+// animate the fuse to have the stroke-dashoffset properties match in negative the total length of the path
+// ! negative to have the shape hidden backwards
+timeline.add({
+  targets: '#fuse',
+  strokeDashoffset: (target) => -target.getTotalLength(),
+  duration: 5000,
+  // ! have the stroke-dasharray match the length of the path to create the actual dashes
+  begin: (animation) => {
+    const target = animation.animatables[0].target;
+    const length = target.getTotalLength();
+    target.setAttribute('stroke-dasharray', length);
+  },
+  easing: 'linear',
+});
+
+// animate the spark to follow the path dictated by #motion-path
+const motionPath = document.querySelector('#motion-path');
+const path = anime.path(motionPath);
+timeline.add({
+  targets: '#spark',
+  translateX: path('x'),
+  translateY: path('y'),
+  rotate: path('angle'),
+  duration: 5000,
+  easing: 'linear',
+}, '-=5000');
+
+// animate the ember to scale between two values
+timeline.add({
+  targets: '#ember',
+  transform: Array(21).fill('scale(2.1)').map((scale, index) => index % 2 === 0 ? 'scale(1.4)': scale),
+  duration: 5000,
+  easing: 'easeInOutSine',
+  direction: 'alternate',
+}, '-=5000');
+
+// animate the sparkles to repeatedly scale up to 1
+timeline.add({
+  targets: '#sparkles',
+  transform: Array(21).fill('scale(1)').map((scale, index) => index % 2 === 0 ? 'scale(0)': scale),
+  duration: 5000,
+  easing: 'easeInOutSine',
+  direction: 'alternate',
+}, '-=5000');
+
+timeline.add({
+  targets: '#spark',
+  scale: 4.5,
+  opacity: 0,
+  duration: 250,
+  easing: 'easeInOutSine',
+});
+timeline.add({
+  targets: '#bomb',
+  scale: 1.5,
+  opacity: 0,
+  duration: 300,
+  delay: 50,
+  easing: 'easeInOutSine',
+}, '-=250');
+timeline.add({
+  targets: '#rupee',
+  scale: [0, 1],
+  opacity: [0, 1],
+  duration: 300,
+  delay: 50,
+  easing: 'easeInOutSine',
+}, '-=250');
+  </script>
+</body>
+
+</html>

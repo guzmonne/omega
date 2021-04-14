@@ -1,0 +1,46 @@
+<script>
+(function(){
+  function Omega (session) {
+    this.session = session
+  }
+
+  // Sends a message to the main process
+  Omega.prototype.send = function send(message) {
+    console.info(JSON.stringify({
+      type: "message",
+      session: this.session,
+      message: JSON.stringify(message)
+    }))
+  }
+  // Start screencasr
+  Omega.prototype.start = function start() {
+    console.info(JSON.stringify({
+      type: "command",
+      action: "start",
+      session: {{.Session }},
+      message: "Start screencast",
+    }))
+  }
+  // Closes the connection
+  Omega.prototype.stop = function close() {
+    console.info(JSON.stringify({
+      type: "command",
+      action: "close",
+      session: {{.Session }},
+      message: "Stop screencast",
+    }))
+  }
+  // Takes a screenshot of the current page
+  Omega.prototype.screenshot = function screenshot() {
+    console.info(JSON.stringify({
+      type: "command",
+      action: "screenshot",
+      session: {{.Session }},
+      message: "Take screenshot",
+    }))
+  }
+
+  // Create Omega
+  window.Omega = new Omega({{ .Session }})
+})(window)
+</script>

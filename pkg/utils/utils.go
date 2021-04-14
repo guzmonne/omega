@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/oklog/ulid"
+	"golang.org/x/sync/errgroup"
 )
 
 func Touch(filePath string, content string) error {
@@ -57,3 +58,20 @@ func BoxBlue(content string) string {
 	return bgBlue(" " + content + " ")
 }
 
+// RunBatchFunc is the function signature for runBatch.
+type RunBatchFunc func() error
+
+// RunBatch runs all functions simultaneously and waits until
+// execution has completed or an error is encountered.
+func RunBatch(fn ...RunBatchFunc) error {
+	eg := errgroup.Group{}
+	for _, f := range fn {
+		eg.Go(f)
+	}
+	return eg.Wait()
+}
+
+// Float64 allocates and returns an *float64
+func Float64(x float64) *float64 {
+	return &x
+}
