@@ -9,7 +9,11 @@
       "type": "go",
       "request": "launch",
       "mode": "debug",
-      "program": "${workspaceFolder}"
+      "program": "${workspaceFolder}/cmd/omega",
+      "env": {
+        "GO_ENV": "debug",
+      },
+      "args": ["record", "chrome", "-m", "timeweb"]
     },
     {
       "name": "Launch test package",

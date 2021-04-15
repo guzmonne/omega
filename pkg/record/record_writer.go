@@ -12,12 +12,15 @@ type RecordWriter struct {
 // MIN_DELAY corresponds to the minimum time that needs to elapse to consider the
 // creation of a new Record in ms.
 const MIN_DELAY = 5
+
+// NewRecordWriter creates a new default RecordWriter.
 func NewRecordWriter() *RecordWriter {
 	// Create an empty []Record
 	records := make([]Record, 0)
 	// Return the RecordWriter
 	return &RecordWriter{time.Now(), records}
 }
+
 // Write the input as a new Record. If the time since the last Record is less
 // than MIN_DELAY, then it modifies the last record appending the new bytes.
 func (writer *RecordWriter) Write(input []byte) (int, error) {

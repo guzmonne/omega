@@ -1,46 +1,50 @@
 <script>
 (function(){
-  function Omega (session) {
-    this.session = session
-  }
+  function Omega () {}
 
-  // Sends a message to the main process
   Omega.prototype.send = function send(message) {
     console.info(JSON.stringify({
       type: "message",
-      session: this.session,
       message: JSON.stringify(message)
     }))
   }
-  // Start screencasr
   Omega.prototype.start = function start() {
     console.info(JSON.stringify({
       type: "command",
       action: "start",
-      session: {{.Session }},
-      message: "Start screencast",
+      message: "Start recording",
     }))
   }
-  // Closes the connection
-  Omega.prototype.stop = function close() {
+  Omega.prototype.stop = function stop() {
     console.info(JSON.stringify({
       type: "command",
-      action: "close",
-      session: {{.Session }},
-      message: "Stop screencast",
+      action: "stop",
+      message: "Stop recording",
     }))
   }
-  // Takes a screenshot of the current page
+  Omega.prototype.done = function done() {
+    console.info(JSON.stringify({
+      type: "command",
+      action: "done",
+      message: "Done",
+    }))
+  }
   Omega.prototype.screenshot = function screenshot() {
     console.info(JSON.stringify({
       type: "command",
       action: "screenshot",
-      session: {{.Session }},
       message: "Take screenshot",
     }))
   }
-
-  // Create Omega
-  window.Omega = new Omega({{ .Session }})
+  // Ready function
+  Omega.prototype.ready = function ready(fn) {
+    if (document.readyState != 'loading'){
+      fn();
+    } else {
+      document.addEventListener('DOMContentLoaded', fn);
+    }
+  }
+  // Add a new Omega object to the global scope
+  window.Omega = new Omega()
 })(window)
 </script>

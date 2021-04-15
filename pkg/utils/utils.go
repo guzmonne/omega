@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"time"
@@ -74,4 +75,20 @@ func RunBatch(fn ...RunBatchFunc) error {
 // Float64 allocates and returns an *float64
 func Float64(x float64) *float64 {
 	return &x
+}
+
+func Info(s string) {
+	fmt.Printf("%s %s\n", BoxBlue("info"), s)
+}
+
+func Message(s string) {
+	fmt.Printf("%s %s\n", BoxGreen("message"), s)
+}
+
+func Command(s string) {
+	fmt.Printf("%s %s\n", BoxRed("command"), s)
+}
+
+func Error(s string) {
+	fmt.Printf("%s %s\n", BoxRed("error"), s)
 }

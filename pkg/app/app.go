@@ -63,7 +63,7 @@ func CreateApp() cli.App {
 				Action: func(c *cli.Context) error {
 					var recordingPath string
 					if c.NArg() == 0 {
-						return errors.New("No recording file was supplied")
+						return errors.New("no recording file was supplied")
 					}
 					recordingPath = c.Args().Get(0)
 					options := &player.PlayOptions{
@@ -182,8 +182,19 @@ func CreateApp() cli.App {
 						Aliases: []string{"c"},
 						Usage: "record a chrome animation",
 						UsageText: "omega record chrome [command options]",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "method",
+								Aliases: []string{"m"},
+								Value: "timeweb",
+								Usage: "recording method. Must be one of 'timeweb' or 'screencast'.",
+								EnvVars: []string{"OMEGA_RECORD_METHOD"},
+							},
+						},
 						Action: func(c *cli.Context) error {
-							if err := record.Chrome(); err != nil {
+							specification := record.NewChromeRecordingSpecification()
+							specification.Method = c.String("method")
+							if err := record.Chrome(specification); err != nil {
 								return err
 							}
 							return nil

@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
-	"runtime"
+	run "runtime"
 	"time"
 
 	"github.com/gobs/args"
@@ -16,6 +17,7 @@ import (
 	"github.com/mafredri/cdp/protocol/dom"
 	"github.com/mafredri/cdp/protocol/emulation"
 	"github.com/mafredri/cdp/protocol/page"
+	"github.com/mafredri/cdp/protocol/runtime"
 	"github.com/mafredri/cdp/rpcc"
 	"gux.codes/omega/pkg/utils"
 )
@@ -24,33 +26,41 @@ import (
 // through the Chrome Development Tools Protocol.
 type Chrome struct {
 	AnimationMessages chan AnimationMessage
-	ScreencastFrames chan *page.ScreencastFrameReply
+	AnimationCommands chan AnimationMessage
+	Frames chan []byte
 	abort chan error
 	connection *rpcc.Conn
 	cancel context.CancelFunc
 	client *cdp.Client
 	ctx context.Context
 	cancelFuncs []func () error
+	stop chan bool
+	virtualTime int
+	fps float64
 }
 
 // NewChrome returns a new Chrome value object with a new context.
 func New() Chrome {
 	ctx, cancel := context.WithCancel(context.Background())
 	return Chrome{
+		// Setup the context
 		ctx: ctx,
 		cancel: cancel,
-		// Create the abort channel
+		// Create the virtualtime handlers
+		virtualTime: 0,
+		fps: 60.0,
+		// Create communication channels
 		abort: make(chan error, 2),
 		AnimationMessages: make(chan AnimationMessage),
-		ScreencastFrames: make(chan *page.ScreencastFrameReply),
+		AnimationCommands: make(chan AnimationMessage),
+		Frames: make(chan []byte),
 	}
 }
 
 type AnimationMessage struct {
-	Session int `json:"session"`
-	Type string `json:"type"`
-	Message string `json:"message"`
 	Action string `json:"action"`
+	Message string `json:"message"`
+	Type string `json:"type"`
 }
 
 type OpenOptions struct {
@@ -93,8 +103,8 @@ func NewOpenOptions() OpenOptions {
 		DisableExtensions: true,
 		AllowHttpScreenCapture: true,
 		AllowInsecuredLocalhost: true,
-		CastInitialScreenWidth: 640,
-		CastInitialScreenHeight: 360,
+		CastInitialScreenWidth: 1920,
+		CastInitialScreenHeight: 1080,
 		DisableFrameRateLimit: true,
 		DisableGPU: true,
 		DisableWebSecurity: true,
@@ -121,7 +131,7 @@ func (c *Chrome) Open(options OpenOptions) error {
 	chromeapp := os.Getenv("OMEGA_CHROMEAPP")
 
 	if chromeapp == "" {
-		switch runtime.GOOS {
+		switch run.GOOS {
 		case "darwin":
 			for _, c := range []string{
 				"/Applications/Google Chrome Canary.app",
@@ -287,9 +297,41 @@ func (c *Chrome) Open(options OpenOptions) error {
 		return err
 	}
 
-	if err := c.startMessageHandler(); err != nil {
+	// Create a messageAdded client
+	messageAdded, err := c.client.Console.MessageAdded(c.ctx)
+	if err != nil {
 		return err
 	}
+
+	mydir, err := os.Getwd()
+	if err != nil {
+			fmt.Println(err)
+	}
+	fmt.Println(mydir)
+
+	// Handle added messages
+	go func() {
+		defer messageAdded.Close()
+
+		for {
+			ev, err := messageAdded.Recv()
+			if err != nil {
+				c.abort <- fmt.Errorf("failed to receive MessageAdded: %v", err)
+			}
+
+			message := AnimationMessage{}
+			if err := json.Unmarshal([]byte(ev.Message.Text), &message); err != nil {
+				c.abort <- fmt.Errorf("failed to unmarshal AnimationMessage: %v", err)
+			}
+
+			switch message.Type {
+			case "message":
+				c.AnimationMessages <- message
+			case "command":
+				c.AnimationCommands <- message
+			}
+		}
+	}()
 
 	return nil
 }
@@ -349,32 +391,20 @@ func (c Chrome) abortOnErrors() error {
 	return nil
 }
 
-func (c Chrome) startMessageHandler() error {
-	// Create a messageAdded client
-	messageAdded, err := c.client.Console.MessageAdded(c.ctx)
-	if err != nil {
-		return err
-	}
-
-	// Handle added messages
-	go func() {
-		defer messageAdded.Close()
-
-		for {
-			ev, err := messageAdded.Recv()
-			if err != nil {
-				c.abort <- fmt.Errorf("failed to receive MessageAdded: %v", err)
-			}
-
-			message := AnimationMessage{}
-			if err := json.Unmarshal([]byte(ev.Message.Text), &message); err != nil {
-				c.abort <- fmt.Errorf("failed to unmarshal AnimationMessage: %v", err)
-			}
-
-			c.AnimationMessages <- message
+// StartRecording starts recording the page using the provided method.
+func (c Chrome) StartRecording(method string) error {
+	switch method {
+	case "screencast":
+		if err := c.StartScreencast(); err != nil {
+			return err
 		}
-	}()
-
+	case "timeweb":
+		if err := c.StartTimeweb(); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid method %s", method)
+	}
 	return nil
 }
 
@@ -382,18 +412,85 @@ func (c Chrome) startMessageHandler() error {
 // screeencast frames.
 func (c Chrome) StartScreencast() error {
 	screencastArgs := page.NewStartScreencastArgs().SetFormat("png").SetEveryNthFrame(1).SetQuality(100)
-	fmt.Println(screencastArgs)
 	err := c.client.Page.StartScreencast(c.ctx, screencastArgs)
 	if err != nil {
 		c.abort <- fmt.Errorf("failed to start page screencast: %v", err)
 		return err
 	}
 
-	// Start the screencast event handler
-	if err := c.startScreencastEventHandler(); err != nil {
+	// Create a screencastFrame client
+	screencastFrame, err := c.client.Page.ScreencastFrame(c.ctx)
+	if err != nil {
 		return err
 	}
 
+	// Handle sceencast frames
+	go func() {
+		defer screencastFrame.Close()
+
+		for {
+			ev, err := screencastFrame.Recv()
+			if err != nil {
+				c.abort <- fmt.Errorf("failed to receive ScreencastFrame: %v", err)
+			}
+
+			err = c.client.Page.ScreencastFrameAck(c.ctx, page.NewScreencastFrameAckArgs(ev.SessionID))
+			if err != nil {
+				c.abort <- fmt.Errorf("failed to ack ScreencastFrame: %v", err)
+			}
+
+			c.Frames <- ev.Data
+		}
+	}()
+
+	return nil
+}
+
+// StartTimeweb starts moving the time forward frame by frame, taking
+// a screenshot on every move.
+func (c *Chrome) StartTimeweb() error {
+	c.stop = make(chan bool, 1)
+
+	go func() {
+		screenshotArgs := page.NewCaptureScreenshotArgs().SetFormat("png")
+
+		timeweb:
+		for {
+			select {
+			case <- c.stop:
+				break timeweb
+			default:
+				// Take screenshot
+				screenshot, err := c.client.Page.CaptureScreenshot(c.ctx, screenshotArgs)
+				if err != nil {
+					c.abort <- err
+				}
+				// Send frame to the Frames channel
+				c.Frames <- screenshot.Data
+				// Move the time one frame further
+				c.nextVirtualTime()
+				c.Evaluate(fmt.Sprintf("timeweb.goTo(%d)", c.virtualTime))
+			}
+		}
+	}()
+
+	return nil
+}
+
+// StopRecording stops the current recording.
+func (c Chrome) StopRecording(method string) error {
+	switch method {
+	case "screencast":
+		if err := c.StopScreencast(); err != nil {
+			return err
+		}
+	case "timeweb":
+		if err := c.StopTimeweb(); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid method %s", method)
+	}
 	return nil
 }
 
@@ -405,6 +502,13 @@ func (c Chrome) StopScreencast() error {
 		c.abort <- fmt.Errorf("failed to stop page screencast %v", err)
 		return err
 	}
+	return nil
+}
+
+// StopTimeweb stops the moving of time on the page using timeweb.
+func (c *Chrome) StopTimeweb() error {
+	c.stop <- true
+
 	return nil
 }
 
@@ -437,32 +541,15 @@ func (c Chrome) Navigate(url string, timeout time.Duration) error {
 	return err
 }
 
-// Starts to listen to ScreencastFrames.
-func (c Chrome) startScreencastEventHandler() error {
-	// Create a screencastFrame client
-	screencastFrame, err := c.client.Page.ScreencastFrame(c.ctx)
+// Evaluate allows the evaluation of an expression on the global scope.
+func (c Chrome) Evaluate(expression string) {
+	evalArgs := runtime.NewEvaluateArgs(expression)
+	_, err := c.client.Runtime.Evaluate(c.ctx, evalArgs)
 	if err != nil {
-		return err
+		c.abort <- fmt.Errorf("failed to Evaluate expression: %v", err)
 	}
+}
 
-	// Handle sceencast frames
-	go func() {
-		defer screencastFrame.Close()
-
-		for {
-			ev, err := screencastFrame.Recv()
-			if err != nil {
-				c.abort <- fmt.Errorf("failed to receive ScreencastFrame: %v", err)
-			}
-
-			err = c.client.Page.ScreencastFrameAck(c.ctx, page.NewScreencastFrameAckArgs(ev.SessionID))
-			if err != nil {
-				c.abort <- fmt.Errorf("failed to ack ScreencastFrame: %v", err)
-			}
-
-			c.ScreencastFrames <- ev
-		}
-	}()
-
-	return nil
+func (c *Chrome) nextVirtualTime() {
+	c.virtualTime += int(math.Floor(1000 / c.fps))
 }

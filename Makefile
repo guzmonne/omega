@@ -26,4 +26,4 @@ test: test-configure test-record test-utils
 ################################################################################
 .PHONY: install
 install:
-	go install ./cmd/omega
+	cd ./cmd/omega && go install .
