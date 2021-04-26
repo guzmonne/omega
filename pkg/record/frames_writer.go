@@ -30,16 +30,20 @@ func (writer *FramesWriter) Write(input []byte) (int, error) {
 // Dump writes all the frames stored into a list of files whose
 // names should be specified as a fileStringTemplate.
 func (writer FramesWriter) Dump(fileStringTemplate string) error {
+	// Create a bar to let the user know of the dump status.
 	bar := pb.StartNew(len(writer.frames))
+
+	// Write the files to the filesystem
 	for index, value := range writer.frames {
 		err := ioutil.WriteFile(fmt.Sprintf(fileStringTemplate, index), value, 0644)
 		if err != nil {
 			return err
 		}
-
+		// Move the bar forward
 		bar.Increment()
 	}
 
+	// Close the bar progress
 	bar.Finish()
 
 	return nil

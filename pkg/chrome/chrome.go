@@ -25,18 +25,24 @@ import (
 // Chrome contains abstracts all the logic required to operate Chrome
 // through the Chrome Development Tools Protocol.
 type Chrome struct {
-	AnimationMessages chan AnimationMessage
-	AnimationCommands chan AnimationMessage
-	Frames chan []byte
 	abort chan error
-	connection *rpcc.Conn
+	// AnimationCommands channels animation command messages.
+	AnimationCommands chan AnimationMessage
+	// AnimationMessages channels animation messages.
+	AnimationMessages chan AnimationMessage
 	cancel context.CancelFunc
-	client *cdp.Client
-	ctx context.Context
 	cancelFuncs []func () error
+	client *cdp.Client
+	connection *rpcc.Conn
+	ctx context.Context
+	// FPS configures the rate at which the animation will be recorded.
+	FPS float64
+	// Frames channels screenshot frames.
+	Frames chan []byte
 	stop chan bool
-	virtualTime int
-	fps float64
+	// VirtualTime corresponds to the time value used when recording
+	// with the timeweb method.
+	VirtualTime int
 }
 
 // NewChrome returns a new Chrome value object with a new context.
@@ -47,8 +53,8 @@ func New() Chrome {
 		ctx: ctx,
 		cancel: cancel,
 		// Create the virtualtime handlers
-		virtualTime: 0,
-		fps: 60.0,
+		VirtualTime: 0,
+		FPS: 60.0,
 		// Create communication channels
 		abort: make(chan error, 2),
 		AnimationMessages: make(chan AnimationMessage),
@@ -97,18 +103,18 @@ type OpenOptions struct {
 
 func NewOpenOptions() OpenOptions {
 	return OpenOptions{
-		DevToolsPort: 9222,
-		HideScrollbars: true,
-		BWSI: true,
-		DisableExtensions: true,
 		AllowHttpScreenCapture: true,
 		AllowInsecuredLocalhost: true,
-		CastInitialScreenWidth: 1920,
+		BWSI: true,
 		CastInitialScreenHeight: 1080,
+		CastInitialScreenWidth: 1920,
+		DevToolsPort: 9222,
+		DisableExtensions: true,
 		DisableFrameRateLimit: true,
 		DisableGPU: true,
 		DisableWebSecurity: true,
 		EnableAccelerated2dCanvas: true,
+		HideScrollbars: true,
 	}
 }
 
@@ -469,7 +475,7 @@ func (c *Chrome) StartTimeweb() error {
 				c.Frames <- screenshot.Data
 				// Move the time one frame further
 				c.nextVirtualTime()
-				c.Evaluate(fmt.Sprintf("timeweb.goTo(%d)", c.virtualTime))
+				c.Evaluate(fmt.Sprintf("timeweb.goTo(%d)", c.VirtualTime))
 			}
 		}
 	}()
@@ -551,5 +557,5 @@ func (c Chrome) Evaluate(expression string) {
 }
 
 func (c *Chrome) nextVirtualTime() {
-	c.virtualTime += int(math.Floor(1000 / c.fps))
+	c.VirtualTime += int(math.Floor(1000 / c.FPS))
 }
