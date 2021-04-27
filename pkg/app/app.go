@@ -6,9 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
-	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/configure"
 	"gux.codes/omega/pkg/player"
 	"gux.codes/omega/pkg/record"
@@ -18,7 +16,6 @@ import (
 func CreateApp() cli.App {
 	var configPath string
 	var outputPath string
-	var projectFolder string
 
 	var ulid = utils.ULID()
 	var home = os.Getenv("HOME") + "/.omega"
@@ -72,60 +69,6 @@ func CreateApp() cli.App {
 						SpeedFactor: c.Float64("speedFactor"),
 					}
 					player.Play(recordingPath, *options)
-
-					return nil
-				},
-			},
-			// Init
-			{
-				Name: "init",
-				Aliases: []string{"i"},
-				Usage: "initialize the app",
-				UsageText: "omega init [command options]",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name: "path",
-						Aliases: []string{"p"},
-						Value: home,
-						Usage: "project folder path",
-						Destination: &projectFolder,
-						EnvVars: []string{"OMEGA_PROJECT_FOLDER"},
-					},
-					&cli.BoolFlag{
-						Name: "force",
-						Aliases: []string{"f"},
-						Value: false,
-						Usage: "overwrites the project folder if defined",
-						EnvVars: []string{"OMEGA_INIT_FORCE"},
-					},
-				},
-				Action: func(c *cli.Context) error {
-					if c.Bool("force") {
-						if err := os.RemoveAll(projectFolder); err != nil {
-							log.Fatal(err)
-						} else {
-							color.Red("Folder %s destroyed", projectFolder)
-							fmt.Println("---")
-						}
-					}
-
-					if err := configure.Init(projectFolder); err != nil {
-						log.Fatal(err)
-					}
-
-					return nil
-				},
-			},
-			// Screenshot
-			{
-				Name: "screenshot",
-				Aliases: []string{"s"},
-				Usage: "take a screenshot of your recording",
-				UsageText: "omega screenshot [command options]",
-				Action: func(c *cli.Context) error {
-					if err := chrome.ScreenShot(); err != nil {
-						return err
-					}
 
 					return nil
 				},
