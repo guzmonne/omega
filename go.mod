@@ -15,6 +15,7 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6

@@ -1,20 +1,28 @@
 package player
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
-	"gux.codes/omega/pkg/configure"
+	"gopkg.in/yaml.v3"
 	"gux.codes/omega/pkg/record"
 )
 
 // PlayOptions modify the way the recording is played.
 type PlayOptions struct {
-	// RealTiming makes the playback use the actual delays between records.
-	RealTiming bool
+	// MaxIdleTime fixes the maximum delay between frames in ms.
+	// Ignored if the `frameDelay` option is set to `auto`.
+	// Set to `auto` to prevent limiting the max idle time.
+	MaxIdleTime int
+	// FrameDelay sets a fixed delay between records in ms.
+	// If the value is "auto" use the actual recording delay.
+	FrameDelay int
 	// Silent eliminates the recording message before playback.
 	Silent bool
 	// SpeedFactor applies a custom factor between record delays.
@@ -24,52 +32,80 @@ type PlayOptions struct {
 // NewPlayOptions returns a default PlayOptions struct.
 func NewPlayOptions() PlayOptions {
 	return PlayOptions{
-		RealTiming: true,
+		MaxIdleTime: -1,
+		FrameDelay: -1,
 		Silent: false,
 		SpeedFactor: 1.0,
 	}
 }
 
+// ReadRecording reads a recording from a file and returns its contents.
+func ReadRecording(recordingPath string) ([]record.Record, error) {
+	var records []record.Record
+	// Check if the config exists at `configPath`
+	if _, err := os.Stat(recordingPath); err != nil {
+		return records, errors.New("Can't find a file at: " + recordingPath)
+	}
+	// Open the configuration file
+	configFile, err := ioutil.ReadFile(recordingPath)
+	if err != nil {
+		return records, err
+	}
+	// Unmarshall the configuration file
+	if err := yaml.Unmarshal(configFile, &records); err != nil {
+		return records, err
+	}
+
+	return records, nil
+}
+
+// AdjustFrameDelays adjusts the delays between records according to the
+// provided options.
+func AdjustFrameDelay(records []record.Record, options PlayOptions) []record.Record {
+	modifiedRecords := make([]record.Record, 0)
+
+	for _, record := range records {
+		if options.FrameDelay != -1 {
+			record.Delay = options.FrameDelay
+		}
+
+		if (options.MaxIdleTime != -1 && options.MaxIdleTime < record.Delay) {
+			record.Delay = options.MaxIdleTime
+		}
+
+		record.Delay = int(float64(record.Delay) * options.SpeedFactor)
+
+		modifiedRecords = append(modifiedRecords, record)
+	}
+
+	return modifiedRecords
+}
+
+
 func Play (recordingPath string, options PlayOptions) error {
 	// Parse the recording file
-	recording, err := record.ReadRecording(recordingPath)
+	records, err := ReadRecording(recordingPath)
 	if err != nil {
 		return err
 	}
 
-	// Create a default FrameDelayOptions stuct
-	frameDelayOptions := record.NewFrameDelayOptions()
-
-	// Override frameDelayOptions with the configuration in the recording.config
-	frameDelayOptions.FrameDelay = recording.Config.FrameDelay
-	frameDelayOptions.MaxIdleTime = recording.Config.MaxIdleTime
-
-	// Modify the frameDelayOptions according to the PlayOptions
-	if options.RealTiming {
-		frameDelayOptions.FrameDelay = configure.Auto(-1)
-		frameDelayOptions.MaxIdleTime = configure.Auto(-1)
-	}
-
-	// Update SpeedFactor
-	frameDelayOptions.SpeedFactor = options.SpeedFactor
-
 	// Modify the delay between records according to FramDelayOptions
-	recording.AdjustFrameDelays(frameDelayOptions)
+	records = AdjustFrameDelay(records, options)
 
 	if !options.Silent {
-		showPlaybackMessage(recordingPath, frameDelayOptions)
+		showPlaybackMessage(recordingPath, options)
 	}
 
 	// Capture the interrupt and kill signals
-	signals := make(chan os.Signal)
-	signal.Notify(signals, os.Interrupt, os.Kill)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	// Interrupt channel
 	interrupt := make(chan bool)
 
 	go func() {
 		Clear()
-		for _, record := range recording.Records {
+		for _, record := range records {
 			fmt.Printf(record.Content)
 			time.Sleep(time.Duration(record.Delay) * time.Millisecond)
 		}
@@ -89,14 +125,14 @@ func Play (recordingPath string, options PlayOptions) error {
 	return nil
 }
 
-func showPlaybackMessage(recordingPath string, options record.FrameDelaysOptions) {
+func showPlaybackMessage(recordingPath string, options PlayOptions) {
 	red := color.New(color.FgRed).SprintFunc()
 	green := color.New(color.FgGreen).SprintFunc()
 
 	fmt.Printf("\nPlaying %s\n", green(recordingPath))
 	fmt.Printf("\nPlayback options:\n")
-	fmt.Printf(("\tFrame Delay:\t%s\n"), options.FrameDelay.String())
-	fmt.Printf(("\tMax Idle Time:\t%s\n"), options.MaxIdleTime.String())
+	fmt.Printf(("\tFrame Delay:\t%d\n"), options.FrameDelay)
+	fmt.Printf(("\tMax Idle Time:\t%d\n"), options.MaxIdleTime)
 	fmt.Printf(("\tSpeed Factor:\t%.2f\n"), options.SpeedFactor)
 	fmt.Printf("\n---\n\n")
 	fmt.Printf("Press %s to exit the recording at any time\n", red("CTRL+C"))

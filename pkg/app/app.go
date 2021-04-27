@@ -4,25 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/urfave/cli/v2"
-	"gux.codes/omega/pkg/configure"
 	"gux.codes/omega/pkg/player"
 	"gux.codes/omega/pkg/record"
 	"gux.codes/omega/pkg/utils"
 )
 
 func CreateApp() cli.App {
-	var configPath string
 	var outputPath string
 
 	var ulid = utils.ULID()
-	var home = os.Getenv("HOME") + "/.omega"
 
 	app := &cli.App{
 		Name: "Ωmega",
-		Usage: "CLI Recorder",
+		Usage: "CLI and Chrome Recorder",
 		Action: func(c *cli.Context) error {
 			fmt.Println("Command not found. Try the -h or --help flags for more information.")
 			return nil
@@ -35,39 +31,47 @@ func CreateApp() cli.App {
 				Aliases: []string{"p"},
 				UsageText: "omega play [command options] RECORDING",
 				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name: "realTiming",
-						Aliases: []string{"r"},
-						Value: false,
-						Usage: "use the original timing between records",
-						EnvVars: []string{"OMEGA_PLAY_REAL_TIMING"},
+					&cli.IntFlag{
+						Name: "maxIdleTime",
+						Value: -1,
+						Usage: "sets the maximum delay between frames in ms",
+						EnvVars: []string{"OMEGA_PLAY_MAXIDLETIME"},
+					},
+					&cli.IntFlag{
+						Name: "frameDelay",
+						Value: -1,
+						Usage: "sets a fixed delay between records in ms.",
+						EnvVars: []string{"OMEGA_PLAY_FRAMEDELAY"},
 					},
 					&cli.BoolFlag{
 						Name: "silent",
-						Aliases: []string{"s"},
 						Value: false,
 						Usage: "silence the message before starting the recording",
 						EnvVars: []string{"OMEGA_PLAY_SILENT"},
 					},
 					&cli.Float64Flag{
 						Name: "speedFactor",
-						Aliases: []string{"f"},
 						Value: 1.0,
 						Usage: "applies a multiplier to each delay",
-						EnvVars: []string{"OMEGA_PLAY_SILENT"},
+						EnvVars: []string{"OMEGA_PLAY_SPEEDFACTOR"},
 					},
 				},
 				Action: func(c *cli.Context) error {
-					var recordingPath string
+					// Check if a recording file was supplied
 					if c.NArg() == 0 {
 						return errors.New("no recording file was supplied")
 					}
-					recordingPath = c.Args().Get(0)
+					recordingPath := c.Args().Get(0)
+
+					// Create the PlayOptions object
 					options := &player.PlayOptions{
-						RealTiming: c.Bool("realTiming"),
+						MaxIdleTime: c.Int("maxIdleTime"),
+						FrameDelay: c.Int("frameDelay"),
 						Silent: c.Bool("silent"),
 						SpeedFactor: c.Float64("speedFactor"),
 					}
+
+					// Play the animation
 					player.Play(recordingPath, *options)
 
 					return nil
@@ -88,31 +92,73 @@ func CreateApp() cli.App {
 						UsageText: "omega record shell [command options]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name: "config",
-								Aliases: []string{"c"},
-								Value: home + "/config.yml",
-								Usage: "configuration file",
-								Destination: &configPath,
-								EnvVars: []string{"OMEGA_RECORD_CONFIG"},
+								Name: "command",
+								Usage: "command to run on the pty",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_COMMAND"},
 							},
 							&cli.StringFlag{
-								Name: "output",
+								Name: "cwd",
+								Usage: "current working directory",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_CWD"},
+							},
+							&cli.StringSliceFlag{
+								Name: "env",
+								Usage: "map of environment variables",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_ENV"},
+							},
+							&cli.IntFlag{
+								Name: "minDelay",
+								Usage: "minimum delay in ms between two records",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_MINDELAY"},
+							},
+							&cli.IntFlag{
+								Name: "cols",
+								Usage: "number of columns to display on the pty interface",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_COLS"},
+							},
+							&cli.IntFlag{
+								Name: "rows",
+								Usage: "number of rows to display on the pty interface",
+								EnvVars: []string{"OMEGA_RECORD_SHELL_ROWS"},
+							},
+							&cli.StringFlag{
+								Name: "outputPath",
 								Aliases: []string{"o"},
 								Value: "./" + ulid + ".yml",
-								DefaultText: "./{random}.yml",
-								Usage: "configuration file",
+								DefaultText: "./{{ ulid }}.yml",
+								Usage: "recording output path",
 								Destination: &outputPath,
-								EnvVars: []string{"OMEGA_RECORD_OUTPUT"},
+								EnvVars: []string{"OMEGA_RECORD_SHELL_OUTPUTPATH"},
 							},
 						},
 						Action: func(c *cli.Context) error {
-							// Create the configuration struct
-							config, err := configure.ReadConfig(configPath)
-							if err != nil {
-								log.Fatal(err)
+							specification := record.NewShellSpecification()
+
+							// Overwrite default specification options
+							if command := c.String("command"); command != "" {
+								specification.Command = command
+							}
+							if cwd := c.String("cwd"); cwd != "" {
+								specification.Cwd = cwd
+							}
+							if env := c.StringSlice("env"); env != nil {
+								specification.Env = env
+							}
+							if minDelay := c.Int("minDelay"); minDelay != 0 {
+								specification.MinDelay = c.Int("minDelay")
+							}
+							if cols := c.Int("cols"); cols != 0 {
+								specification.Cols = cols
+							}
+							if rows := c.Int("rows"); rows != 0 {
+								specification.Rows = rows
+							}
+							if outputPath := c.String("outputPath"); outputPath != "" {
+								specification.OutputPath = outputPath
 							}
 
-							if err := record.Shell(outputPath, config); err != nil {
+							// Start recording the shell
+							if err := record.Shell(*specification); err != nil {
 								log.Fatal(err)
 							}
 
