@@ -133,7 +133,7 @@ func Chrome(specification ChromeRecordingSpecification) error {
 // program if it receives an interrupt from the OS. We then handle this by calling
 // our clean up procedure and exiting the program.
 func setupCloseHandler(c chan os.Signal, handler func() error) {
-	<-c
+	<- c
 	fmt.Println("\r- Ctrl+C pressed in Terminal")
 	if err := handler(); err != nil {
 		fmt.Printf("%s %s\n", utils.BoxRed("message"), err)
