@@ -1,4 +1,4 @@
-package record
+package shell
 
 import (
 	"io"
@@ -12,6 +12,15 @@ import (
 	"golang.org/x/term"
 )
 
+// Record corresponds to a PTY interface stdout record
+type Record struct {
+  // Delay from the last record.
+	Delay int `yaml:"delay"`
+  // Content of the record.
+	Content string `yaml:"content"`
+}
+
+// ShellSpecification dictates how the pty session will be recorded.
 type ShellSpecification struct {
   // Command to execute on the pty interface.
   Command string

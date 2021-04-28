@@ -1,4 +1,4 @@
-package record
+package chrome
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
-	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/utils"
 )
 
@@ -20,7 +19,7 @@ type ChromeRecordingSpecification struct {
 	Method string
 	// ChromeFlags defines the set of flags to be used when opening a
 	// new Chrome instance.
-	ChromeFlags chrome.OpenOptions
+	ChromeFlags OpenOptions
 	// VirtualTime is the initial time to be used when the method of
 	// recording is `timeweb`.
 	VirtualTime int
@@ -37,14 +36,14 @@ func NewChromeRecordingSpecification() ChromeRecordingSpecification {
 		Method: "timescale",
 		VirtualTime: 0,
 		FPS: 60.0,
-		ChromeFlags: chrome.NewOpenOptions(),
+		ChromeFlags: NewOpenOptions(),
 	}
 }
 
 const port = 38080
 
 func Chrome(specification ChromeRecordingSpecification) error {
-	c := chrome.New()
+	c := NewRecorder()
 	// Override default Chrome options
 	c.VirtualTime = specification.VirtualTime
 	c.FPS = specification.FPS

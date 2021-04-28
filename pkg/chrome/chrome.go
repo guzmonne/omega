@@ -22,9 +22,9 @@ import (
 	"gux.codes/omega/pkg/utils"
 )
 
-// Chrome contains abstracts all the logic required to operate Chrome
+// Recorder contains abstracts all the logic required to operate Chrome
 // through the Chrome Development Tools Protocol.
-type Chrome struct {
+type Recorder struct {
 	abort chan error
 	// AnimationCommands channels animation command messages.
 	AnimationCommands chan AnimationMessage
@@ -45,10 +45,10 @@ type Chrome struct {
 	VirtualTime int
 }
 
-// NewChrome returns a new Chrome value object with a new context.
-func New() Chrome {
+// NewRecorder returns a new Recorder value object with a new context.
+func NewRecorder() Recorder {
 	ctx, cancel := context.WithCancel(context.Background())
-	return Chrome{
+	return Recorder{
 		// Setup the context
 		ctx: ctx,
 		cancel: cancel,
@@ -120,7 +120,7 @@ func NewOpenOptions() OpenOptions {
 
 // Close runs the cancel function for the context and closes
 // the browser.
-func (c Chrome) Close() error {
+func (c Recorder) Close() error {
 	for _, f := range c.cancelFuncs {
 		if err := f(); err != nil {
 			return err
@@ -133,7 +133,7 @@ func (c Chrome) Close() error {
 
 // Open starts the Chrome browser with its devtools and a client
 // CDP connection to it.
-func (c *Chrome) Open(options OpenOptions) error {
+func (c *Recorder) Open(options OpenOptions) error {
 	chromeapp := os.Getenv("OMEGA_CHROMEAPP")
 
 	if chromeapp == "" {
@@ -343,7 +343,7 @@ func (c *Chrome) Open(options OpenOptions) error {
 }
 
 // abortOnErrors handles errors occured while navigating the page
-func (c Chrome) abortOnErrors() error {
+func (c Recorder) abortOnErrors() error {
 	exceptionThrown, err := c.client.Runtime.ExceptionThrown(c.ctx)
 	if err != nil {
 		return err
@@ -398,7 +398,7 @@ func (c Chrome) abortOnErrors() error {
 }
 
 // StartRecording starts recording the page using the provided method.
-func (c Chrome) StartRecording(method string) error {
+func (c Recorder) StartRecording(method string) error {
 	switch method {
 	case "screencast":
 		if err := c.StartScreencast(); err != nil {
@@ -416,7 +416,7 @@ func (c Chrome) StartRecording(method string) error {
 
 // StartScreencast send an event through the CDP client to start sending
 // screeencast frames.
-func (c Chrome) StartScreencast() error {
+func (c Recorder) StartScreencast() error {
 	screencastArgs := page.NewStartScreencastArgs().SetFormat("png").SetEveryNthFrame(1).SetQuality(100)
 	err := c.client.Page.StartScreencast(c.ctx, screencastArgs)
 	if err != nil {
@@ -454,7 +454,7 @@ func (c Chrome) StartScreencast() error {
 
 // StartTimeweb starts moving the time forward frame by frame, taking
 // a screenshot on every move.
-func (c *Chrome) StartTimeweb() error {
+func (c *Recorder) StartTimeweb() error {
 	c.stop = make(chan bool, 1)
 
 	go func() {
@@ -484,7 +484,7 @@ func (c *Chrome) StartTimeweb() error {
 }
 
 // StopRecording stops the current recording.
-func (c Chrome) StopRecording(method string) error {
+func (c Recorder) StopRecording(method string) error {
 	switch method {
 	case "screencast":
 		if err := c.StopScreencast(); err != nil {
@@ -502,7 +502,7 @@ func (c Chrome) StopRecording(method string) error {
 
 // StopScreencast send an event through the CDP client to stop sending
 // screeencast frames.
-func (c Chrome) StopScreencast() error {
+func (c Recorder) StopScreencast() error {
 	err := c.client.Page.StopScreencast(c.ctx)
 	if err != nil {
 		c.abort <- fmt.Errorf("failed to stop page screencast %v", err)
@@ -512,7 +512,7 @@ func (c Chrome) StopScreencast() error {
 }
 
 // StopTimeweb stops the moving of time on the page using timeweb.
-func (c *Chrome) StopTimeweb() error {
+func (c *Recorder) StopTimeweb() error {
 	c.stop <- true
 
 	return nil
@@ -520,7 +520,7 @@ func (c *Chrome) StopTimeweb() error {
 
 // Navigate navigates Chrome to the URL and waits for DOMContentEventFired.
 // An error is returned if timeout happens before DOMContentEventFired.
-func (c Chrome) Navigate(url string, timeout time.Duration) error {
+func (c Recorder) Navigate(url string, timeout time.Duration) error {
 	var cancel context.CancelFunc
 	c.ctx, cancel = context.WithTimeout(c.ctx, timeout)
 	c.cancelFuncs = append(c.cancelFuncs, func() error {cancel(); return nil})
@@ -548,7 +548,7 @@ func (c Chrome) Navigate(url string, timeout time.Duration) error {
 }
 
 // Evaluate allows the evaluation of an expression on the global scope.
-func (c Chrome) Evaluate(expression string) {
+func (c Recorder) Evaluate(expression string) {
 	evalArgs := runtime.NewEvaluateArgs(expression)
 	_, err := c.client.Runtime.Evaluate(c.ctx, evalArgs)
 	if err != nil {
@@ -556,6 +556,6 @@ func (c Chrome) Evaluate(expression string) {
 	}
 }
 
-func (c *Chrome) nextVirtualTime() {
+func (c *Recorder) nextVirtualTime() {
 	c.VirtualTime += int(math.Floor(1000 / c.FPS))
 }

@@ -1,4 +1,4 @@
-package player
+package shell
 
 import (
 	"bytes"
@@ -8,12 +8,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
-	"gux.codes/omega/pkg/record"
 )
 
 type PlaySuite struct {
 	recordingPath string
-	records []record.Record
+	records []Record
 	playOptions PlayOptions
 	suite.Suite
 }
@@ -43,7 +42,7 @@ func (suite *PlaySuite) createRecording() {
 
 func (suite *PlaySuite) SetupSuite() {
 	suite.recordingPath = "/tmp/recording.yml"
-	suite.records = []record.Record{{Delay: 0, Content: "0"}, {Delay: 1, Content: "1"}}
+	suite.records = []Record{{Delay: 0, Content: "0"}, {Delay: 1, Content: "1"}}
 	suite.playOptions = NewPlayOptions()
 }
 
@@ -79,8 +78,8 @@ func (suite *PlaySuite) TestAdjustFrameDelay() {
 		frameDelay := 100
 		playOptions := NewPlayOptions()
 		playOptions.FrameDelay = frameDelay
-		original := []record.Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
-		expected := []record.Record{{Delay: frameDelay, Content: "1"}, {Delay: frameDelay, Content: "2"}}
+		original := []Record{{Delay: 1, Content: "1"}, {Delay: 2, Content: "2"}}
+		expected := []Record{{Delay: frameDelay, Content: "1"}, {Delay: frameDelay, Content: "2"}}
 		actual := AdjustFrameDelay(original, playOptions)
 		suite.Equal(expected, actual)
 	})
@@ -89,8 +88,8 @@ func (suite *PlaySuite) TestAdjustFrameDelay() {
 		maxIdleDelay := 50
 		playOptions := NewPlayOptions()
 		playOptions.MaxIdleTime = maxIdleDelay
-		original := []record.Record{{Delay: 100, Content: "1"}, {Delay: 200, Content: "2"}}
-		expected := []record.Record{{Delay: maxIdleDelay, Content: "1"}, {Delay: maxIdleDelay, Content: "2"}}
+		original := []Record{{Delay: 100, Content: "1"}, {Delay: 200, Content: "2"}}
+		expected := []Record{{Delay: maxIdleDelay, Content: "1"}, {Delay: maxIdleDelay, Content: "2"}}
 		actual := AdjustFrameDelay(original, playOptions)
 		suite.Equal(expected, actual)
 	})
@@ -99,8 +98,8 @@ func (suite *PlaySuite) TestAdjustFrameDelay() {
 		speedFactor := 2.0
 		playOptions := NewPlayOptions()
 		playOptions.SpeedFactor = speedFactor
-		original := []record.Record{{Delay: 100, Content: "1"}, {Delay: 200, Content: "2"}}
-		expected := []record.Record{{Delay: int(100 * speedFactor), Content: "1"}, {Delay: int(200 * speedFactor), Content: "2"}}
+		original := []Record{{Delay: 100, Content: "1"}, {Delay: 200, Content: "2"}}
+		expected := []Record{{Delay: int(100 * speedFactor), Content: "1"}, {Delay: int(200 * speedFactor), Content: "2"}}
 		actual := AdjustFrameDelay(original, playOptions)
 		suite.Equal(expected, actual)
 	})

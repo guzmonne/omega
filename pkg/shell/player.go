@@ -1,4 +1,4 @@
-package player
+package shell
 
 import (
 	"errors"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
-	"gux.codes/omega/pkg/record"
 )
 
 // PlayOptions modify the way the recording is played.
@@ -40,8 +39,8 @@ func NewPlayOptions() PlayOptions {
 }
 
 // ReadRecording reads a recording from a file and returns its contents.
-func ReadRecording(recordingPath string) ([]record.Record, error) {
-	var records []record.Record
+func ReadRecording(recordingPath string) ([]Record, error) {
+	var records []Record
 	// Check if the config exists at `configPath`
 	if _, err := os.Stat(recordingPath); err != nil {
 		return records, errors.New("Can't find a file at: " + recordingPath)
@@ -61,8 +60,8 @@ func ReadRecording(recordingPath string) ([]record.Record, error) {
 
 // AdjustFrameDelays adjusts the delays between records according to the
 // provided options.
-func AdjustFrameDelay(records []record.Record, options PlayOptions) []record.Record {
-	modifiedRecords := make([]record.Record, 0)
+func AdjustFrameDelay(records []Record, options PlayOptions) []Record {
+	modifiedRecords := make([]Record, 0)
 
 	for _, record := range records {
 		if options.FrameDelay != -1 {
