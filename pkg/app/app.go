@@ -6,9 +6,9 @@ import (
 	"log"
 
 	"github.com/urfave/cli/v2"
-	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/shell"
 	"gux.codes/omega/pkg/utils"
+	"gux.codes/omega/pkg/web"
 )
 
 func CreateApp() cli.App {
@@ -173,61 +173,30 @@ func CreateApp() cli.App {
 				Name: "chrome",
 				Aliases: []string{"c"},
 				Usage: "chrome animation",
-				UsageText: "omega chrome subcommand [subcommand options]",
+				UsageText: "omega chrome SUBCOMMAND [SUBCOMMAND OPTIONS]",
 				Subcommands: []*cli.Command{
 					{
-						Name: "record",
-						Aliases: []string{"r"},
-						Usage: "record chrome animation",
-						UsageText: "omega chrome record [options]",
-						Flags: []cli.Flag{
-							// Record flags
-							&cli.StringFlag{
-								Name: "method",
-								Aliases: []string{"m"},
-								Value: "timeweb",
-								Usage: "recording method (must be one of 'timeweb' or 'screencast')",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_WIDTH"},
-							},
-							&cli.IntFlag{
-								Name: "width",
-								Value: 1920,
-								Usage: "width of the Chrome window",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_METHOD"},
-							},
-							&cli.IntFlag{
-								Name: "height",
-								Value: 1080,
-								Usage: "height of the Chrome window",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_HEIGHT"},
-							},
-							&cli.IntFlag{
-								Name: "virtualTime",
-								Aliases: []string{"v"},
-								Value: 0,
-								Usage: "initial virtual time (only used when method is `timeweb`)",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_VIRTUAL_TIME"},
-							},
-							&cli.Float64Flag{
-								Name: "fps",
-								Aliases: []string{"f"},
-								Value: 0,
-								Usage: "onfigures the rate at which the animation will be recorded (only used when method is `timeweb`)",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_FPS"},
-							},
-						},
+						Name: "screenshot",
+						Usage: "take a screenshot of the first frame of the animation",
+						UsageText: "omega chrome screenshot [OPTIONS]",
 						Action: func(c *cli.Context) error {
-							specification := chrome.NewChromeRecordingSpecification()
-							// Override default chrome record specification options
-							specification.Method = c.String("method")
-							specification.ChromeFlags.CastInitialScreenWidth = c.Int("width")
-							specification.ChromeFlags.CastInitialScreenHeight = c.Int("height")
-							specification.VirtualTime = c.Int("virtualTime")
-							specification.FPS = c.Float64("fps")
-							// Open Chrome to record the animation
-							if err := chrome.Chrome(specification); err != nil {
+							if err := web.Screenshot(); err != nil {
 								return err
 							}
+
+							return nil
+						},
+					},
+					{
+						Name: "record",
+						Usage: "record chrome animation",
+						UsageText: "omega chrome record [OPTIONS]",
+						Flags: []cli.Flag{},
+						Action: func(c *cli.Context) error {
+							if err := web.Record(); err != nil {
+								return err
+							}
+
 							return nil
 						},
 					},

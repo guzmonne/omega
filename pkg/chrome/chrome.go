@@ -241,7 +241,7 @@ func (c *Recorder) Open(options OpenOptions) error {
 			break
 		}
 	}
-	// Check if an error occur while trying to connect to the Chrome devTools.
+	// Check if an error occurs while trying to connect to the Chrome devTools.
 	if err != nil {
 		return err
 	}

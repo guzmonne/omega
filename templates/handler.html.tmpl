@@ -22,6 +22,13 @@ body {
   outline: none;
   overflow: hidden;
 }
+
+#playing {
+  display: none;
+  position: fixed;
+  left: -100vw;
+  top: -100vh;
+}
   </style>
   <meta name="theme-color" content="#fafafa">
 </head>
@@ -33,7 +40,7 @@ body {
   </svg>
 
   <!-- Libraries -->
-{{if eq .method "timeweb"}}  <script src="/assets/timeweb.js"></script>{{ end }}
+  <script src="/assets/timeweb.js"></script>
   <script src="/assets/anime.min.js"></script>
   <!-- Communication Script -->
   {{ template "communication.html.tmpl" . }}

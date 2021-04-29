@@ -5,15 +5,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Omega record chrome -m timeweb",
+      "name": "Omega chrome record",
       "type": "go",
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd/omega",
       "env": {
         "GO_ENV": "debug",
+        "OMEGA_SERVER_ASSETS": "../../assets",
+        "OMEGA_SERVER_TEMPLATES": "../../templates/*",
       },
-      "args": ["record", "chrome", "-m", "timeweb"]
+      "args": ["chrome", "record"]
     },
     {
       "name": "Launch test package",

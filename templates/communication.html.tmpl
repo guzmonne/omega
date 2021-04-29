@@ -5,7 +5,7 @@
   Omega.prototype.send = function send(message) {
     console.info(JSON.stringify({
       type: "message",
-      message: JSON.stringify(message)
+      message: `${message}`
     }))
   }
   Omega.prototype.start = function start() {

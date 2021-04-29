@@ -3,6 +3,7 @@ module gux.codes/omega
 go 1.15
 
 require (
+	github.com/cheggaaa/pb v1.0.29
 	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/chromedp/cdproto v0.0.0-20210323015217-0942afbea50e
 	github.com/chromedp/chromedp v0.6.10
