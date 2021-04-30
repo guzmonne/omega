@@ -200,6 +200,19 @@ func CreateApp() cli.App {
 							return nil
 						},
 					},
+					{
+						Name: "fsm",
+						Usage: "record chrome animation",
+						UsageText: "omega chrome record [OPTIONS]",
+						Flags: []cli.Flag{},
+						Action: func(c *cli.Context) error {
+							if err := web.StartRecording(); err != nil {
+								return err
+							}
+
+							return nil
+						},
+					},
 				},
 			},
 		},

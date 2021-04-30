@@ -15,6 +15,8 @@ const (
 	NoOp EventType = "NoOp"
 )
 
+var NoOpEvent = Event{Type: NoOp}
+
 // StateType represents an extensible state type in the state machine.
 type StateType string
 

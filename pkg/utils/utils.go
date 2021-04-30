@@ -92,3 +92,7 @@ func Command(s string) {
 func Error(s string) {
 	fmt.Printf("%s %s\n", BoxRed("error"), s)
 }
+
+func Success(s string) {
+	fmt.Printf("%s %s\n", BoxGreen("error"), s)
+}
