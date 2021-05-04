@@ -203,12 +203,24 @@ func CreateApp() cli.App {
 					{
 						Name: "channels",
 						Usage: "record chrome animation",
-						UsageText: "omega chrome record [OPTIONS]",
+						UsageText: "omega chrome channels [OPTIONS]",
 						Flags: []cli.Flag{},
 						Action: func(c *cli.Context) error {
 							if err := web.StartRecording(); err != nil {
 								return err
 							}
+
+							return nil
+						},
+					},
+					{
+						Name: "serve",
+						Usage: "serve the handler web server",
+						UsageText: "omega chrome serve [OPTIONS]",
+						Flags: []cli.Flag{},
+						Action: func(c *cli.Context) error {
+							webServerOptions := web.NewWebServerOptions()
+							web.Serve(webServerOptions)
 
 							return nil
 						},

@@ -30,7 +30,7 @@ func Record() error {
 
 	// Run the web server
 	webServerOptions := NewWebServerOptions()
-	go startWebServer(webServerOptions)
+	go Serve(webServerOptions)
 
 	// Set up a channel so we can block later while we get each animation frame
 	done := make(chan bool, 1)

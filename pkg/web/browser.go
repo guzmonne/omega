@@ -2,17 +2,13 @@ package web
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
-	"sync"
 	"syscall"
 
-	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
@@ -24,6 +20,8 @@ type Browser struct {
 
 // Opens the Browser and starts the handler web server.
 func (b *Browser) Open(parent context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(parent)
+
 	// Fail if this function is called more than once.
 	if b.ready {
 		log.Fatal(errors.New("browser has already been initialized"))
@@ -31,9 +29,7 @@ func (b *Browser) Open(parent context.Context) (context.Context, context.CancelF
 
 	// Start the web server on a different goroutine
 	webServerOptions := NewWebServerOptions()
-	go startWebServer(webServerOptions)
-
-	ctx, cancel := b.NewHandler(parent)
+	go Serve(webServerOptions)
 
 	// Set the browser as ready
 	b.ready = true
@@ -55,11 +51,22 @@ func (b *Browser) Open(parent context.Context) (context.Context, context.CancelF
 func (b *Browser) NewHandler(parent context.Context) (context.Context, context.CancelFunc) {
 	ctx, cancel := chromedp.NewContext(parent)
 
-	// Create a WaitGroup
+	// ensure the tab is created
+	if err := chromedp.Run(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	/*
+	// Create a Wait Group
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	chromedp.ListenTarget(ctx, func(ev interface{}) {
+	// Create a context just for the listener. It will be disconnected when the
+	// context gets closed.
+	lctx, lcancel := context.WithCancel(ctx)
+
+	// Listen for the start command.
+	chromedp.ListenTarget(lctx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
 			for _, arg := range ev.Args {
@@ -71,10 +78,12 @@ func (b *Browser) NewHandler(parent context.Context) (context.Context, context.C
 				}
 				if message.Type == "command" && message.Action == "start" {
 					wg.Done()
+					lcancel()
 				}
 			}
 		}
 	})
+	*/
 
 	// Ensure the tab is created.
 	urlstr := fmt.Sprintf("http://localhost:%d/handler", b.webServerOptions.Port)
@@ -83,7 +92,7 @@ func (b *Browser) NewHandler(parent context.Context) (context.Context, context.C
 	}
 
 	// Wait until the handler sends the start command.
-	wg.Wait()
+	// wg.Wait()
 
 	return ctx, cancel
 }
@@ -137,7 +146,7 @@ func (b *Browser) Screenshot(parent context.Context, index int) ([]byte, error) 
 }
 
 // Move the active handler to the provided vt. The virtual time should always increment.
-func (b *Browser) GoTo(parent context.Context, index, vt int) ([]byte, error) {
+func (b *Browser) GoTo(parent context.Context, index , vt int) ([]byte, error) {
 	var res []byte
 
 	ctx, _ := b.GetHandlerContext(parent, index)

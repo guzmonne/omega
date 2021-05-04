@@ -20,7 +20,7 @@ func Screenshot() error {
 
 	// Run the web server
 	webServerOptions := NewWebServerOptions()
-	go startWebServer(webServerOptions)
+	go Serve(webServerOptions)
 
 	// Navigate to the URL
 	url := fmt.Sprintf("http://localhost:%d/handler", webServerOptions.Port)

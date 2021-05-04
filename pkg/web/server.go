@@ -29,7 +29,7 @@ func NewWebServerOptions() WebServerOptions {
 }
 
 // start the server from which the handler function is served.
-func startWebServer(options WebServerOptions) {
+func Serve(options WebServerOptions) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Web server error in: ", r)
@@ -60,7 +60,7 @@ func startWebServer(options WebServerOptions) {
 	router.Static("/assets", assets)
 	// Create the routes
 	router.GET("/handler", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "handler.html.tmpl", gin.H{"width": options.Width, "height": options.Height})
+		c.HTML(http.StatusOK, "three.html.tmpl", gin.H{"width": options.Width, "height": options.Height})
 	})
 	// Run the server
 	router.Run(fmt.Sprintf(":%d", options.Port))
