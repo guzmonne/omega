@@ -201,7 +201,7 @@ func CreateApp() cli.App {
 						},
 					},
 					{
-						Name: "fsm",
+						Name: "channels",
 						Usage: "record chrome animation",
 						UsageText: "omega chrome record [OPTIONS]",
 						Flags: []cli.Flag{},

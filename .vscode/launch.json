@@ -28,7 +28,7 @@
         "OMEGA_SERVER_ASSETS": "../../assets",
         "OMEGA_SERVER_TEMPLATES": "../../templates/*",
       },
-      "args": ["chrome", "fsm"]
+      "args": ["chrome", "channels"]
     },
     {
       "name": "Launch test package",
