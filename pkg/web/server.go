@@ -20,11 +20,11 @@ type WebServerOptions struct {
 }
 
 // NewWebServerOptions creates a default WebServerOptions struct.
-func NewWebServerOptions() *WebServerOptions {
-	return &WebServerOptions{
+func NewWebServerOptions() WebServerOptions {
+	return WebServerOptions{
 		Width: 1920,
 		Height: 1080,
-		Port: 8080,
+		Port: 38080,
 	}
 }
 
