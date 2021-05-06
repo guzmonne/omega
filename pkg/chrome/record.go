@@ -1,4 +1,4 @@
-package web
+package chrome
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"github.com/cheggaaa/pb"
 )
 
-// StartRecording starts the process of recording a Chrome animation.
-func StartRecording() error {
+// Record starts the process of recording a Chrome animation.
+func Record() error {
 	// Create a canceable context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

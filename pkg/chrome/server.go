@@ -1,4 +1,4 @@
-package web
+package chrome
 
 import (
 	"fmt"
@@ -11,10 +11,6 @@ import (
 
 // WebServerOptions are used to configure the web server.
 type WebServerOptions struct {
-	// Width of the page
-	Width int
-	// Height of the page
-	Height int
 	// Port from which to run the server
 	Port int
 }
@@ -22,8 +18,6 @@ type WebServerOptions struct {
 // NewWebServerOptions creates a default WebServerOptions struct.
 func NewWebServerOptions() WebServerOptions {
 	return WebServerOptions{
-		Width: 1920,
-		Height: 1080,
 		Port: 38080,
 	}
 }
@@ -60,7 +54,7 @@ func Serve(options WebServerOptions) {
 	router.Static("/assets", assets)
 	// Create the routes
 	router.GET("/handler", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "three.html.tmpl", gin.H{"width": options.Width, "height": options.Height})
+		c.HTML(http.StatusOK, "three.html.tmpl", nil)
 	})
 	// Run the server
 	router.Run(fmt.Sprintf(":%d", options.Port))
