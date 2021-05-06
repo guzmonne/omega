@@ -9,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
@@ -56,43 +59,11 @@ func (b *Browser) NewHandler(parent context.Context) (context.Context, context.C
 		log.Fatal(err)
 	}
 
-	/*
-	// Create a Wait Group
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	// Create a context just for the listener. It will be disconnected when the
-	// context gets closed.
-	lctx, lcancel := context.WithCancel(ctx)
-
-	// Listen for the start command.
-	chromedp.ListenTarget(lctx, func(ev interface{}) {
-		switch ev := ev.(type) {
-		case *runtime.EventConsoleAPICalled:
-			for _, arg := range ev.Args {
-				message := ConsoleMessage{}
-				data := strings.ReplaceAll(fmt.Sprintf("%s", arg.Value[1 : len(arg.Value) -1]), "\\", "")
-				err := json.Unmarshal([]byte(data), &message)
-				if err != nil {
-					log.Fatal(err)
-				}
-				if message.Type == "command" && message.Action == "start" {
-					wg.Done()
-					lcancel()
-				}
-			}
-		}
-	})
-	*/
-
 	// Ensure the tab is created.
 	urlstr := fmt.Sprintf("http://localhost:%d/handler", b.webServerOptions.Port)
 	if err := chromedp.Run(ctx, chromedp.Navigate(urlstr)); err != nil {
 		log.Fatal(err)
 	}
-
-	// Wait until the handler sends the start command.
-	// wg.Wait()
 
 	return ctx, cancel
 }
@@ -131,10 +102,10 @@ func (b *Browser) GetHandlerContext(parent context.Context, index int) (context.
 }
 
 // Takes a screenshot of the active handler
-func (b *Browser) Screenshot(parent context.Context, index int) ([]byte, error) {
+func (b *Browser) Screenshot(ctx context.Context) ([]byte, error) {
 	var frame []byte
 
-	ctx, _ := b.GetHandlerContext(parent, index)
+	//ctx, _ := b.GetHandlerContext(parent, index)
 
 	err := chromedp.Run(ctx, chromedp.Tasks{screenshot(1920, 1080, &frame)})
 	if err != nil {
@@ -146,10 +117,10 @@ func (b *Browser) Screenshot(parent context.Context, index int) ([]byte, error) 
 }
 
 // Move the active handler to the provided vt. The virtual time should always increment.
-func (b *Browser) GoTo(parent context.Context, index , vt int) ([]byte, error) {
+func (b *Browser) GoTo(ctx context.Context, vt int) ([]byte, error) {
 	var res []byte
 
-	ctx, _ := b.GetHandlerContext(parent, index)
+	//ctx, _ := b.GetHandlerContext(parent, index)
 
 	err := chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf("timeweb.goTo(%d)", vt), &res))
 	if err != nil {
@@ -167,5 +138,53 @@ func NewBrowser() Browser {
 	return Browser{
 		webServerOptions: webServerOptions,
 		ready: false,
+	}
+}
+
+// screenshot will take a screenshot of the current page
+func screenshot(width int64, height int64, buf *[]byte) chromedp.Tasks {
+	return chromedp.Tasks{
+		chromedp.ActionFunc(func (ctx context.Context) error {
+			// Set a default transparent background
+			err := emulation.SetDefaultBackgroundColorOverride().
+				WithColor(&cdp.RGBA{R: 0,G: 0,B: 0,A: 0.0}).
+				Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			// Force viewport emulation
+			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+				WithScreenOrientation(&emulation.ScreenOrientation{
+					Type: emulation.OrientationTypePortraitPrimary,
+					Angle: 0,
+				}).
+				Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			// Get layout metrics
+			_, _, cssContentSize, err := page.GetLayoutMetrics().Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			*buf, err = page.CaptureScreenshot().
+				WithFormat(page.CaptureScreenshotFormatPng).
+				WithClip(&page.Viewport{
+					X: cssContentSize.X,
+					Y: cssContentSize.Y,
+					Width: cssContentSize.Width,
+					Height: cssContentSize.Height,
+					Scale: 1,
+				}).
+				Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}),
 	}
 }

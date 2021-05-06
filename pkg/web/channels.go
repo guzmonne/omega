@@ -19,62 +19,58 @@ func StartRecording() error {
 	defer cancel()
 
 	// Calculate the total number of frames.
-	duration := 10000
-	fps := 60
-	frameDuration := 1000 / fps
-	frames := duration / frameDuration + 1
-	workers := 4
-	chunkSize := frames / workers
-
-	// Open one tab for each worker
-	for i := 0; i < workers; i++ {
-		ctx, _ = browser.NewHandler(ctx)
-	}
+	duration        := 10000
+	fps             := 60
+	frameDuration   := 1000 / fps
+	frames          := duration / frameDuration + 1
+	workers         := 1
+	framesPerWorker := frames / workers
 
 	// Instantiate the progress bar.
-	bar := pb.StartNew(chunkSize * workers)
+	bar := pb.StartNew(framesPerWorker * workers)
 
 	// Create a new Wait Group
 	var wg sync.WaitGroup
 
-	// Create the worker
-	worker := func(id, start, end int) {
-		var wwg sync.WaitGroup
-
-		for f := 0; f < end; f++ {
-			if _, err := browser.GoTo(ctx, id, f); err != nil {
-				panic(err)
-			}
-			// Windup until we can start capturing frames.
-			if f < start {
-				continue
-			}
-			// Take screenshot
-			frame, err := browser.Screenshot(ctx, id)
-			if err != nil {
-				panic(err)
-			}
-			// Save screenshot on the disk
-			wwg.Add(1)
-			go func(frame []byte, f int) {
-				if err := ioutil.WriteFile(fmt.Sprintf("/tmp/%06d.png", f), frame, 0644); err != nil {
+	// Run all the workers
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(id int){
+			// Defer calling Done on the WG
+			defer wg.Done()
+			// Create a wait group for the goroutines that store the frames
+			var fwg sync.WaitGroup
+			ctx, _ = browser.NewHandler(ctx)
+			// Get the start and end frame for this worker
+			start := id * framesPerWorker
+			end   := start + framesPerWorker - 1
+			// Wind the clock of the worker
+			for f := 0; f < start; f++ {
+				if _, err := browser.GoTo(ctx, f); err != nil {
 					panic(err)
 				}
-				bar.Increment()
-				defer wwg.Done()
-			}(frame, f)
-		}
-		// Wait for all the goroutines that save to the disk to finish.
-		wwg.Wait()
-
-		fmt.Println("worker", id, "done")
-		defer wg.Done()
-	}
-
-	for i := 0; i < workers; i++ {
-		offset := i * chunkSize
-		go worker(i, offset, offset + chunkSize)
-		wg.Add(1)
+			}
+			// Start recording the frames
+			for f := start; f < end; f++ {
+				frame, err := browser.Screenshot(ctx)
+				if err != nil {
+					panic(err)
+				}
+				// Start a goroutine to save the frame to the disk
+				fwg.Add(1)
+				go func(frame []byte, number int) {
+					// Defer calling done on the frames wg
+					defer fwg.Done()
+					path := fmt.Sprintf("/tmp/%06d.png", number)
+					if err := ioutil.WriteFile(path, frame, 0644); err != nil {
+						panic(err)
+					}
+					bar.Increment()
+				}(frame, f)
+			}
+			// Wait until all the frames are stored on the disk
+			fwg.Wait()
+		}(i)
 	}
 
 	// Wait for the workers to finish
