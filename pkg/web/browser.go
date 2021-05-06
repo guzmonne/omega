@@ -5,14 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
 
@@ -22,90 +18,28 @@ type Browser struct {
 }
 
 // Opens the Browser and starts the handler web server.
-func (b *Browser) Open(parent context.Context) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(parent)
+func (b *Browser) Open(parent context.Context, url string) (context.Context, context.CancelFunc) {
+	ctx, cancel := chromedp.NewContext(parent)
 
 	// Fail if this function is called more than once.
 	if b.ready {
 		log.Fatal(errors.New("browser has already been initialized"))
 	}
 
-	// Start the web server on a different goroutine
-	webServerOptions := NewWebServerOptions()
-	go Serve(webServerOptions)
-
 	// Set the browser as ready
 	b.ready = true
 
-	// Setup a Ctrl+C handler
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-	go func(){
-		<- signals
-		fmt.Println("\r- Ctrl+C pressed in Terminal")
-		cancel()
-		os.Exit(0)
-	}()
-
-	return ctx, cancel
-}
-
-// Opens a new handler tab, and waits until the handler is ready to be recorded.
-func (b *Browser) NewHandler(parent context.Context) (context.Context, context.CancelFunc) {
-	ctx, cancel := chromedp.NewContext(parent)
-
-	// ensure the tab is created
-	if err := chromedp.Run(ctx); err != nil {
-		log.Fatal(err)
-	}
-
-	// Ensure the tab is created.
-	urlstr := fmt.Sprintf("http://localhost:%d/handler", b.webServerOptions.Port)
-	if err := chromedp.Run(ctx, chromedp.Navigate(urlstr)); err != nil {
+	// Navigate to the url
+	if err := chromedp.Run(ctx, chromedp.Navigate(url)); err != nil {
 		log.Fatal(err)
 	}
 
 	return ctx, cancel
-}
-
-// Handlers lists all the handlers in the browser attached to the given context.
-func (b *Browser) Handlers(ctx context.Context) ([]*target.Info, error) {
-	return chromedp.Targets(ctx)
-}
-
-// GetHandler gets a single handler from the handlers in the browser attached to the given context
-// identified by its index.
-func (b *Browser) GetHandler(ctx context.Context, index int) (*target.Info, error) {
-	handlers, err := b.Handlers(ctx)
-	if err != nil {
-		fmt.Println("browser.GetHandler error")
-		return nil, err
-	}
-
-	if len(handlers) <= index {
-		fmt.Println("browser.GetHandler error")
-		return nil, errors.New("handler index out of range")
-	}
-
-	return handlers[index], nil
-}
-
-// GetHandlerContext returns a context configured to interact with the handler identified
-// by its index.
-func (b *Browser) GetHandlerContext(parent context.Context, index int) (context.Context, context.CancelFunc) {
-	handler, err := b.GetHandler(parent, index)
-	if err != nil {
-		fmt.Println("browser.GetHandlerContext error")
-		log.Fatal(err)
-	}
-	return chromedp.NewContext(parent, chromedp.WithTargetID(handler.TargetID))
 }
 
 // Takes a screenshot of the active handler
 func (b *Browser) Screenshot(ctx context.Context) ([]byte, error) {
 	var frame []byte
-
-	//ctx, _ := b.GetHandlerContext(parent, index)
 
 	err := chromedp.Run(ctx, chromedp.Tasks{screenshot(1920, 1080, &frame)})
 	if err != nil {
@@ -119,8 +53,6 @@ func (b *Browser) Screenshot(ctx context.Context) ([]byte, error) {
 // Move the active handler to the provided vt. The virtual time should always increment.
 func (b *Browser) GoTo(ctx context.Context, vt int) ([]byte, error) {
 	var res []byte
-
-	//ctx, _ := b.GetHandlerContext(parent, index)
 
 	err := chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf("timeweb.goTo(%d)", vt), &res))
 	if err != nil {

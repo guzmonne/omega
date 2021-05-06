@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/chromedp/chromedp"
@@ -12,12 +13,16 @@ func Screenshot() error {
 	// Create the browser
 	browser := NewBrowser()
 
-	// Open the browser
-	ctx, cancel := browser.Open(context.Background())
-	defer cancel()
+	// Start the web server on a different goroutine
+	webServerOptions := NewWebServerOptions()
+	go Serve(webServerOptions)
 
-	// Open a new handler
-	ctx, _ = browser.NewHandler(ctx)
+	// Create the handler url
+	urlstr := fmt.Sprintf("http://localhost:%d/handler", webServerOptions.Port)
+
+	// Open the browser
+	ctx, cancel := browser.Open(context.Background(), urlstr)
+	defer cancel()
 
 	// Take the screenshot
 	buf, err := browser.Screenshot(ctx)

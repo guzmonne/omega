@@ -4,30 +4,47 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/cheggaaa/pb"
 )
 
 // StartRecording starts the process of recording a Chrome animation.
 func StartRecording() error {
-	// Create the browser
-	browser := NewBrowser()
-
-	// Open the browser
-	ctx, cancel := browser.Open(context.Background())
+	// Create a canceable context
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Setup a Ctrl+C handler
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	go func(){
+		<- signals
+		fmt.Println("\r- Ctrl+C pressed in Terminal")
+		cancel()
+		os.Exit(0)
+	}()
+
+	// Start the web server on a different goroutine
+	webServerOptions := NewWebServerOptions()
+	go Serve(webServerOptions)
 
 	// Calculate the total number of frames.
 	duration        := 10000
 	fps             := 60
 	frameDuration   := 1000 / fps
 	frames          := duration / frameDuration + 1
-	workers         := 1
+	workers         := 4
 	framesPerWorker := frames / workers
 
 	// Instantiate the progress bar.
 	bar := pb.StartNew(framesPerWorker * workers)
+
+	// Create the handler url
+	urlstr := fmt.Sprintf("http://localhost:%d/handler", webServerOptions.Port)
 
 	// Create a new Wait Group
 	var wg sync.WaitGroup
@@ -36,14 +53,15 @@ func StartRecording() error {
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		go func(id int){
-			// Defer calling Done on the WG
-			defer wg.Done()
-			// Create a wait group for the goroutines that store the frames
-			var fwg sync.WaitGroup
-			ctx, _ = browser.NewHandler(ctx)
+			// Create a browser
+			browser := NewBrowser()
+			// Open the browser
+			ctx, cancel := browser.Open(ctx, urlstr)
+			// Defer calling Done on the WG and closing the browser
+			defer func(){ wg.Done(); cancel() }()
 			// Get the start and end frame for this worker
 			start := id * framesPerWorker
-			end   := start + framesPerWorker - 1
+			end   := start + framesPerWorker
 			// Wind the clock of the worker
 			for f := 0; f < start; f++ {
 				if _, err := browser.GoTo(ctx, f); err != nil {
@@ -56,20 +74,17 @@ func StartRecording() error {
 				if err != nil {
 					panic(err)
 				}
-				// Start a goroutine to save the frame to the disk
-				fwg.Add(1)
-				go func(frame []byte, number int) {
-					// Defer calling done on the frames wg
-					defer fwg.Done()
-					path := fmt.Sprintf("/tmp/%06d.png", number)
-					if err := ioutil.WriteFile(path, frame, 0644); err != nil {
-						panic(err)
-					}
-					bar.Increment()
-				}(frame, f)
+				// Save the frame to disk
+				if err := ioutil.WriteFile(fmt.Sprintf("/tmp/%06d.png", f), frame, 0644); err != nil {
+					panic(err)
+				}
+				// Move the vt forward
+				if _, err := browser.GoTo(ctx, f); err != nil {
+					panic(err)
+				}
+				// Update the bar
+				bar.Increment()
 			}
-			// Wait until all the frames are stored on the disk
-			fwg.Wait()
 		}(i)
 	}
 
