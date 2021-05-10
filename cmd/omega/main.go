@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/chromedp/cdproto/page"
 	"github.com/urfave/cli/v2"
 	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/shell"
@@ -180,12 +181,61 @@ func main() {
 						Name: "record",
 						Usage: "record chrome animation",
 						UsageText: "omega chrome record [OPTIONS]",
-						Flags: []cli.Flag{},
+						Flags: []cli.Flag{
+							&cli.IntFlag{
+								Name: "duration",
+								Aliases: []string{"d"},
+								Value: 1000,
+								Usage: "duration of the recording",
+								EnvVars: []string{"OMEGA_CHROME_RECORD_DURATION"},
+							},
+							&cli.IntFlag{
+								Name: "fps",
+								Aliases: []string{"f"},
+								Value: 60,
+								Usage: "fps of the recording",
+								EnvVars: []string{"OMEGA_CHROME_RECORD_FPS"},
+							},
+							&cli.IntFlag{
+								Name: "workers",
+								Aliases: []string{"w"},
+								Value: 1,
+								Usage: "amount of concurrent browsers recording frames",
+								EnvVars: []string{"OMEGA_CHROME_RECORD_WORKERS"},
+							},
+							&cli.Float64Flag{
+								Name: "width",
+								Aliases: []string{"W"},
+								Value: 1920,
+								Usage: "width of the recording",
+								EnvVars: []string{"OMEGA_CHROME_RECORD_WIDTH"},
+							},
+							&cli.Float64Flag{
+								Name: "height",
+								Aliases: []string{"H"},
+								Value: 1080,
+								Usage: "height of the recording",
+								EnvVars: []string{"OMEGA_CHROME_RECORD_HEIGHT"},
+							},
+						},
 						Action: func(c *cli.Context) error {
-							if err := chrome.Record(); err != nil {
+							// Create the recording params from the provided flags.
+							params := chrome.RecordParams{
+								Duration: c.Int("duration"),
+								FPS     : c.Int("fps"),
+								Workers : c.Int("workers"),
+								Viewport: page.Viewport{
+									Width   : c.Float64("width"),
+									Height  : c.Float64("height"),
+									X       : 0,
+									Y       : 0,
+									Scale   : 1,
+								},
+							}
+							// Start recording
+							if err := chrome.Record(params); err != nil {
 								return err
 							}
-
 							return nil
 						},
 					},
@@ -197,7 +247,6 @@ func main() {
 						Action: func(c *cli.Context) error {
 							webServerOptions := chrome.NewWebServerOptions()
 							chrome.Serve(webServerOptions)
-
 							return nil
 						},
 					},

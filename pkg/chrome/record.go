@@ -3,17 +3,35 @@ package chrome
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"math"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/cheggaaa/pb"
+	"github.com/chromedp/cdproto/page"
+	"gux.codes/omega/pkg/browser"
+	"gux.codes/omega/pkg/utils"
 )
 
+// RecordParams specifies how the recording should be done.
+type RecordParams struct {
+	// Duration to recording.
+	Duration int
+	// FPS determines the frames per second of the recording.
+	FPS int
+	// URL specifies the URL to be recorded.
+	URL string
+	// Interface used to write the frames to disk.
+	Writer utils.Writer
+	// Workers used for the recording.
+	Workers int
+	// Viewport params.
+	Viewport page.Viewport
+}
+
 // Record starts the process of recording a Chrome animation.
-func Record() error {
+func Record(params RecordParams) error {
 	// Create a canceable context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -32,64 +50,90 @@ func Record() error {
 	webServerOptions := NewWebServerOptions()
 	go Serve(webServerOptions)
 
-	// Calculate the total number of frames.
-	duration        := 10000
-	fps             := 60
-	frameDuration   := 1000 / fps
-	frames          := duration / frameDuration + 1
-	workers         := 4
-	framesPerWorker := frames / workers
+	// Override the provided RecordParams
+	params.Writer = utils.FWriter
+	params.URL = fmt.Sprintf("http://localhost:%d/handler", webServerOptions.Port)
 
-	// Instantiate the progress bar.
-	bar := pb.StartNew(framesPerWorker * workers)
-
-	// Create the handler url
-	urlstr := fmt.Sprintf("http://localhost:%d/handler", webServerOptions.Port)
-
-	// Create a new Wait Group
-	var wg sync.WaitGroup
-
-	// Run all the workers
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func(id int){
-			// Create a browser
-			browser := NewBrowser()
-			// Open the browser
-			ctx, cancel := browser.Open(ctx, urlstr)
-			// Defer calling Done on the WG and closing the browser
-			defer func(){ wg.Done(); cancel() }()
-			// Get the start and end frame for this worker
-			start := id * framesPerWorker
-			end   := start + framesPerWorker
-			// Wind the clock of the worker
-			for f := 0; f < start; f++ {
-				if _, err := browser.GoTo(ctx, f); err != nil {
-					panic(err)
-				}
-			}
-			// Start recording the frames
-			for f := start; f < end; f++ {
-				frame, err := browser.Screenshot(ctx)
-				if err != nil {
-					panic(err)
-				}
-				// Save the frame to disk
-				if err := ioutil.WriteFile(fmt.Sprintf("/tmp/%06d.png", f), frame, 0644); err != nil {
-					panic(err)
-				}
-				// Move the vt forward
-				if _, err := browser.GoTo(ctx, f); err != nil {
-					panic(err)
-				}
-				// Update the bar
-				bar.Increment()
-			}
-		}(i)
+	// Start the browsers and start recording each session
+	if err := record(ctx, params); err != nil {
+		return err
 	}
 
-	// Wait for the workers to finish
-	wg.Wait()
+	return nil
+}
+
+func record(parent context.Context, params RecordParams) error {
+	// Store all the available workers
+	availableWorkers := params.Workers
+
+	// Calculate the amount of frames ro record.
+	frameDuration   := 1000 / float64(params.FPS)
+	framesToRecord  := params.Duration * params.FPS / 1000
+
+	// Create a channel to communicate when a goroutine is ready to do more work
+	// providing an appropiate context.
+	routineReady := make(chan context.Context)
+
+	// Create a map that holds the frames that each browser has last processed
+	previousFrames := make(map[context.Context]int)
+
+	// Instantiate the progress bar.
+	bar := pb.StartNew(int(framesToRecord))
+
+	// Run a goroutine to take a screenshot of each frame.
+	for f := 0; f < framesToRecord; f++ {
+		var ctx context.Context
+		ctx = nil
+		// Check if there are no more routines available
+		if availableWorkers == 0 {
+			// Wait until a new routine is ready
+			ctx = <- routineReady
+			// Increase the number of available routines
+			availableWorkers += 1
+		}
+		// Decrease the number of available routines
+		availableWorkers -= 1
+		// If no context is defined, we create a new one.
+		if ctx == nil {
+			var cancel context.CancelFunc
+			ctx, cancel = browser.Chrome.NewContext(parent)
+			if err := browser.Chrome.Navigate(ctx, params.URL); err != nil {
+				return err
+			}
+			defer cancel()
+		}
+		// Launch a new routine to record the current frame
+		go func(ctx context.Context, pf, f int) {
+			// Windup clock
+			for i := pf + 1; i <= f; i++ {
+				script := fmt.Sprintf("timeweb.goTo(%.0f)", math.Ceil(float64(i) * frameDuration))
+				if _, err := browser.Chrome.Evaluate(ctx, script); err != nil {
+					panic(err)
+				}
+			}
+			// Take screenshot
+			frame, err := browser.Chrome.Screenshot(ctx, params.Viewport)
+			if err != nil {
+				panic(err)
+			}
+			// Store screenshot
+			if err := params.Writer.WriteFile(fmt.Sprintf("/tmp/%06d.png", f), frame, 0644); err != nil {
+				panic(err)
+			}
+			// Update the bar
+			bar.Increment()
+			// Notify that a goroutine is available
+			routineReady <- ctx
+		}(ctx, previousFrames[ctx], f)
+		// Update the previousFrames map
+		previousFrames[ctx] = f
+	}
+
+	// Wait for all running goroutines to finish
+	for availableWorkers < params.Workers {
+		<- routineReady
+		availableWorkers += 1
+	}
 
 	// Finish the bar
 	bar.Finish()
