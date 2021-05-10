@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"gux.codes/omega/pkg/utils"
 )
 
 // WebServerOptions are used to configure the web server.
@@ -35,10 +34,6 @@ func Serve(options WebServerOptions) {
 	gin.SetMode(gin.ReleaseMode)
 	// Create the default router
 	router := gin.New()
-	// Change the way logs are outputed.
-	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		return fmt.Sprintf("%s %s %d\n", utils.BoxBlue(param.Method), param.Path, param.StatusCode)
-	}))
 	router.Use(gin.Recovery())
 	// Load the templates
 	templates := os.Getenv("OMEGA_SERVER_TEMPLATES")
