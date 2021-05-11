@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/chromedp/cdproto/page"
 	"github.com/urfave/cli/v2"
 	"gux.codes/omega/pkg/chrome"
 	"gux.codes/omega/pkg/shell"
@@ -182,21 +181,14 @@ func main() {
 						Usage: "record chrome animation",
 						UsageText: "omega chrome record [OPTIONS]",
 						Flags: []cli.Flag{
-							&cli.IntFlag{
+							&cli.Float64Flag{
 								Name: "duration",
 								Aliases: []string{"d"},
 								Value: 1000,
 								Usage: "duration of the recording",
 								EnvVars: []string{"OMEGA_CHROME_RECORD_DURATION"},
 							},
-							&cli.IntFlag{
-								Name: "fps",
-								Aliases: []string{"f"},
-								Value: 60,
-								Usage: "fps of the recording",
-								EnvVars: []string{"OMEGA_CHROME_RECORD_FPS"},
-							},
-							&cli.IntFlag{
+							&cli.Int64Flag{
 								Name: "workers",
 								Aliases: []string{"w"},
 								Value: 1,
@@ -221,16 +213,10 @@ func main() {
 						Action: func(c *cli.Context) error {
 							// Create the recording params from the provided flags.
 							params := chrome.RecordParams{
-								Duration: c.Int("duration"),
-								FPS     : c.Int("fps"),
+								Duration: c.Float64("duration"),
 								Workers : c.Int("workers"),
-								Viewport: page.Viewport{
-									Width   : c.Float64("width"),
-									Height  : c.Float64("height"),
-									X       : 0,
-									Y       : 0,
-									Scale   : 1,
-								},
+								Width   : c.Int64("width"),
+								Height  : c.Int64("height"),
 							}
 							// Start recording
 							if err := chrome.Record(params); err != nil {

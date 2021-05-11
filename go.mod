@@ -4,8 +4,8 @@ go 1.16
 
 require (
 	github.com/cheggaaa/pb v1.0.29
-	github.com/chromedp/cdproto v0.0.0-20210323015217-0942afbea50e
-	github.com/chromedp/chromedp v0.6.10
+	github.com/chromedp/cdproto v0.0.0-20210429002609-5ec2b0624aec
+	github.com/chromedp/chromedp v0.7.1
 	github.com/creack/pty v1.1.11
 	github.com/fatih/color v1.10.0
 	github.com/gin-gonic/gin v1.7.0
@@ -13,7 +13,6 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

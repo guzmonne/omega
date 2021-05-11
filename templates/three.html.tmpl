@@ -2,19 +2,31 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Demo 01</title>
-    <script type="text/javascript" src="/assets/timeweb.js"></script>
-		<script type="text/javascript" src="/assets/three.min.js" ></script>
-		<script type="text/javascript" src="/assets/omega.js" ></script>
+		<meta charset="utf-8">
+		<title>Ωmega - Chrome handler</title>
+		<meta name="description" content="Chrome animation recorder">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="theme-color" content="#fafafa">
+		<style>
+body {
+	margin: 0;
+	padding: 0;
+	outline: none;
+	overflow: hidden;
+}
+		</style>
 	</head>
 	<body style="text-align:center;">
+		<script type="text/javascript" src="/assets/timeweb.js"></script>
+		<script type="text/javascript" src="/assets/three.min.js" ></script>
+		<script type="text/javascript" src="/assets/omega.js" ></script>
     <script>
 var scene, camera, renderer, mesh;
 
 function init(){
 	// Create a scene and camera
 	scene = new THREE.Scene();
-	camera = new THREE.PerspectiveCamera(90, 1280/720, 0.1, 1000);
+	camera = new THREE.PerspectiveCamera(90, window.innerWidth/window.innerHeight, 0.1, 1000);
 
 	// A Mesh is made up of a geometry and a material.
 	// Materials affect how the geometry looks, especially under lights.
@@ -38,7 +50,7 @@ function init(){
 
 	// Creates the renderer with size 1280x720
 	renderer = new THREE.WebGLRenderer();
-	renderer.setSize(1280, 720);
+	renderer.setSize(window.innerWidth, window.innerHeight);
 	// Puts the "canvas" into our HTML page.
 	document.body.appendChild(renderer.domElement);
 

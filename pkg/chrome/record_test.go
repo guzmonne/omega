@@ -2,9 +2,9 @@ package chrome
 
 import (
 	"context"
+	"math"
 	"testing"
 
-	"github.com/chromedp/cdproto/page"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	mbrowser "gux.codes/omega/mocks/browser"
@@ -33,24 +33,18 @@ func (suite *RecordSuite) TestRecord() {
 	// Create the RecordParams object
 	params := RecordParams{
 		Duration: 1000,
-		FPS     : 60,
 		URL     : "https://example.com",
 		Writer  : &suite.writer,
 		Workers : 8,
-		Viewport: page.Viewport{
-			Width : 1920,
-			Height: 1080,
-			X     : 0,
-			Y     : 0,
-			Scale : 1,
-		},
+		Width : 1920,
+		Height: 1080,
 	}
 
 	// Default browser behavior
 	browser.Chrome.(*mbrowser.BrowserHandler).On("NewContext", parent).Return(context.WithCancel(context.Background()))
-	browser.Chrome.(*mbrowser.BrowserHandler).On("Navigate", parent, params.URL).Return(nil)
+	browser.Chrome.(*mbrowser.BrowserHandler).On("Navigate", parent, params.URL, mock.AnythingOfType("int64"), mock.AnythingOfType("int64")).Return(nil)
 	browser.Chrome.(*mbrowser.BrowserHandler).On("Evaluate", parent, mock.AnythingOfType("string")).Return(nil, nil)
-	browser.Chrome.(*mbrowser.BrowserHandler).On("Screenshot", parent, params.Viewport).Return(nil, nil)
+	browser.Chrome.(*mbrowser.BrowserHandler).On("Screenshot", parent).Return(nil, nil)
 	suite.writer.On("WriteFile", mock.AnythingOfType("string"), mock.Anything, mock.Anything).Return(nil)
 	// Run the record function
 	record(parent, params)
@@ -59,18 +53,18 @@ func (suite *RecordSuite) TestRecord() {
 	browser.Chrome.(*mbrowser.BrowserHandler).AssertNumberOfCalls(suite.T(), "NewContext", params.Workers)
 
 	// Calculate the amount of frames ro record.
-	framesToRecord  := params.Duration * params.FPS / 1000
+	framesToRecord  := math.Ceil(params.Duration * FPS / 1000)
 
 	// Check that the screenshot function was called for each frame
-	browser.Chrome.(*mbrowser.BrowserHandler).AssertNumberOfCalls(suite.T(), "Screenshot", framesToRecord)
+	browser.Chrome.(*mbrowser.BrowserHandler).AssertNumberOfCalls(suite.T(), "Screenshot", int(framesToRecord))
 
 	// Check that the write function was called for each frame
-	suite.writer.AssertNumberOfCalls(suite.T(), "WriteFile", framesToRecord)
+	suite.writer.AssertNumberOfCalls(suite.T(), "WriteFile", int(framesToRecord))
 
 	// Check that the evaluate function was called to go to the first and last frame
-	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(17)`)
-	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(967)`)
-	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(984)`)
+	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(16.667)`)
+	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(966.667)`)
+	browser.Chrome.(*mbrowser.BrowserHandler).AssertCalled(suite.T(), "Evaluate", mock.Anything, `timeweb.goTo(983.333)`)
 }
 
 // Run the test suite

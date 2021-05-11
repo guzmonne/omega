@@ -5,7 +5,6 @@ package mocks
 import (
 	context "context"
 
-	page "github.com/chromedp/cdproto/page"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,13 +36,13 @@ func (_m *BrowserHandler) Evaluate(ctx context.Context, script string) ([]byte, 
 	return r0, r1
 }
 
-// Navigate provides a mock function with given fields: ctx, urlstr
-func (_m *BrowserHandler) Navigate(ctx context.Context, urlstr string) error {
-	ret := _m.Called(ctx, urlstr)
+// Navigate provides a mock function with given fields: ctx, urlstr, width, height
+func (_m *BrowserHandler) Navigate(ctx context.Context, urlstr string, width int64, height int64) error {
+	ret := _m.Called(ctx, urlstr, width, height)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, urlstr)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int64, int64) error); ok {
+		r0 = rf(ctx, urlstr, width, height)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -76,13 +75,13 @@ func (_m *BrowserHandler) NewContext(parent context.Context) (context.Context, c
 	return r0, r1
 }
 
-// Screenshot provides a mock function with given fields: ctx, viewport
-func (_m *BrowserHandler) Screenshot(ctx context.Context, viewport page.Viewport) ([]byte, error) {
-	ret := _m.Called(ctx, viewport)
+// Screenshot provides a mock function with given fields: ctx
+func (_m *BrowserHandler) Screenshot(ctx context.Context) ([]byte, error) {
+	ret := _m.Called(ctx)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, page.Viewport) []byte); ok {
-		r0 = rf(ctx, viewport)
+	if rf, ok := ret.Get(0).(func(context.Context) []byte); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -90,8 +89,8 @@ func (_m *BrowserHandler) Screenshot(ctx context.Context, viewport page.Viewport
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, page.Viewport) error); ok {
-		r1 = rf(ctx, viewport)
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
