@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sync"
 	"syscall"
 	"time"
@@ -87,7 +88,6 @@ func NewDev(entryPoint string) error {
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	go func(){
 		<- signals
-		doneCh <- true
 		close(doneCh)
 		fmt.Println("\r- Ctrl+C pressed in Terminal")
 		acancel()
@@ -112,7 +112,6 @@ func NewDev(entryPoint string) error {
 
 	// Block until something happens
 	<- doneCh
-	close(doneCh)
 
 	return nil
 }
@@ -128,13 +127,9 @@ func errorsListener(doneCh <-chan bool, errorsCh <-chan []api.Message) {
 			}
 			// shell.Clear()
 			utils.Error("Some errors were encountered while building...")
-			for index, err := range errs {
-				utils.BoxRed(fmt.Sprintf("Error #%d", index))
-				fmt.Printf( "Location: %s\n", err.Location.File)
-				fmt.Printf( "Line Nr : %d\n", err.Location.Line)
-				fmt.Println("Detail  :")
-				fmt.Println(err.Detail)
-				fmt.Println()
+			for _, err := range errs {
+				fmt.Printf("Location: at %s on line %d\n", err.Location.File, err.Location.Line)
+				fmt.Printf("Reason  : %s\n", err.Text)
 			}
 		}
 	}
@@ -153,9 +148,13 @@ func changesListener(doneCh <-chan bool, entryPoint string, changeCh chan<- bool
 			if err != nil {
 				log.Println(err)
 			}
-			folder := filepath.Join(cwd, entryPoint)
+			folder := filepath.Dir(filepath.Join(cwd, entryPoint))
 			err = filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
+					return err
+				}
+				fromNodeModules, err := regexp.MatchString(`node_modules\/`, path)
+				if fromNodeModules || err != nil {
 					return err
 				}
 				newPaths[path] = info.ModTime()
@@ -225,14 +224,14 @@ func build(doneCh <-chan bool, entryPoint string) (chan<- bool, <-chan bool, <-c
 					Write            : false,
 				})
 
-				utils.Info("Compiling new version")
+				utils.Info("Building new version")
 
 				if len(result.Errors) > 0 {
 					errorsCh <- result.Errors
 				} else {
 					D.SetScript(string(result.OutputFiles[0].Contents))
 					// shell.Clear()
-					utils.Success("Compilation is done!")
+					utils.Success("Build is done!")
 					reloadCh <- true
 				}
 			}
