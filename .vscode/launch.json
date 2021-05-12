@@ -18,7 +18,7 @@
       "args": ["chrome", "record"]
     },
     {
-      "name": "Omega chrome fsm",
+      "name": "Omega chrome dev",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -28,7 +28,7 @@
         "OMEGA_SERVER_ASSETS": "../../assets",
         "OMEGA_SERVER_TEMPLATES": "../../templates/*",
       },
-      "args": ["chrome", "channels"]
+      "args": ["chrome", "dev", "-e", "../../examples/threejs/index.js"]
     },
     {
       "name": "Launch test package",

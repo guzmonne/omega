@@ -7,6 +7,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20210429002609-5ec2b0624aec
 	github.com/chromedp/chromedp v0.7.1
 	github.com/creack/pty v1.1.11
+	github.com/evanw/esbuild v0.11.20
 	github.com/fatih/color v1.10.0
 	github.com/gin-gonic/gin v1.7.0
 	github.com/kr/pretty v0.1.0 // indirect

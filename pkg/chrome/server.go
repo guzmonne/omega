@@ -51,6 +51,12 @@ func Serve(options WebServerOptions) {
 	router.GET("/handler", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "three.html.tmpl", nil)
 	})
+	router.GET("/dev", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "dev.html.tmpl", nil)
+	})
+	router.GET("/dev/script.js", func(c *gin.Context) {
+		c.String(http.StatusOK, D.GetScript())
+	})
 	// Run the server
 	router.Run(fmt.Sprintf(":%d", options.Port))
 }

@@ -64,21 +64,21 @@ func Float64(x float64) *float64 {
 }
 
 func Info(s string) {
-	fmt.Printf("%s %s\n", BoxBlue("info"), s)
+	fmt.Printf("%s %s\n", BoxBlue("INFO   "), s)
 }
 
 func Message(s string) {
-	fmt.Printf("%s %s\n", BoxGreen("message"), s)
+	fmt.Printf("%s %s\n", BoxGreen("MESSAGE"), s)
 }
 
 func Command(s string) {
-	fmt.Printf("%s %s\n", BoxRed("command"), s)
+	fmt.Printf("%s %s\n", BoxRed("COMMAND"), s)
 }
 
 func Error(s string) {
-	fmt.Printf("%s %s\n", BoxRed("error"), s)
+	fmt.Printf("%s %s\n", BoxRed("ERROR  "), s)
 }
 
 func Success(s string) {
-	fmt.Printf("%s %s\n", BoxGreen("error"), s)
+	fmt.Printf("%s %s\n", BoxGreen("SUCCESS"), s)
 }

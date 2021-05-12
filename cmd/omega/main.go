@@ -236,6 +236,27 @@ func main() {
 							return nil
 						},
 					},
+					{
+						Name: "dev",
+						Usage: "opens a development environment",
+						UsageText: "omega chrome dev [OPTIONS]",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "entryPoint",
+								Value: "./index.js",
+								Aliases: []string{"e"},
+								Usage: "entrypoints of the development environment",
+								EnvVars: []string{"OMEGA_CHROME_DEV_ENTRYPOINT"},
+							},
+						},
+						Action: func(c *cli.Context) error {
+							if err := chrome.NewDev(c.String("entryPoint")); err != nil {
+								return err
+							}
+
+							return nil
+						},
+					},
 				},
 			},
 		},
