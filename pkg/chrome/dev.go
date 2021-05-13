@@ -23,6 +23,10 @@ type DevelopmentEnvironment interface {
 	SetScript(script string)
 	// GetScript gets the current development script
 	GetScript() string
+	// SetStyle sets the current development script
+	SetStyles(style string)
+	// GetStyle gets the current development script
+	GetStyles() string
 }
 
 type Dev struct {
@@ -30,6 +34,8 @@ type Dev struct {
 	mu sync.Mutex
 	// Script stores the current built script
 	Script string
+	// Styles stores the current build styles
+	Styles string
 }
 
 // SetScript sets the current development script safely
@@ -44,6 +50,18 @@ func (d *Dev) GetScript() string {
 	return d.Script
 }
 
+// SetStyles sets the current development script safely
+func (d *Dev) SetStyles(script string) {
+	d.mu.Lock()
+	d.Styles = script
+	d.mu.Unlock()
+}
+
+// GetStyles gets the current development script safely
+func (d *Dev) GetStyles() string {
+	return d.Styles
+}
+
 var D DevelopmentEnvironment
 
 func init() {
@@ -52,7 +70,6 @@ func init() {
 
 func NewDev(entryPoint string) error {
 	// Clear the screen
-	// shell.Clear()
 	utils.Info("Starting the development environment...")
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -60,6 +77,9 @@ func NewDev(entryPoint string) error {
     chromedp.Flag("disable-gpu", false),
     chromedp.Flag("enable-automation", false),
     chromedp.Flag("disable-extensions", false),
+    chromedp.Flag("auto-open-devtools-for-tabs", true),
+    chromedp.Flag("enable-kiosk-mode", true),
+    chromedp.Flag("window-size", "1200,700"),
 	)
 
 	// Start the web server on a different goroutine
@@ -88,7 +108,6 @@ func NewDev(entryPoint string) error {
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	go func(){
 		<- signals
-		close(doneCh)
 		fmt.Println("\r- Ctrl+C pressed in Terminal")
 		acancel()
 		cancel()
@@ -125,7 +144,6 @@ func errorsListener(doneCh <-chan bool, errorsCh <-chan []api.Message) {
 			if errs == nil {
 				continue
 			}
-			// shell.Clear()
 			utils.Error("Some errors were encountered while building...")
 			for _, err := range errs {
 				fmt.Printf("Location: at %s on line %d\n", err.Location.File, err.Location.Line)
@@ -142,7 +160,7 @@ func changesListener(doneCh <-chan bool, entryPoint string, changeCh chan<- bool
 		select {
 		case <- doneCh:
 			return
-		case <- time.After(2 * time.Second):
+		case <- time.After(5 * time.Second):
 			newPaths := make(map[string]time.Time)
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -189,21 +207,7 @@ func build(doneCh <-chan bool, entryPoint string) (chan<- bool, <-chan bool, <-c
 	reloadCh := make(chan bool)
 	errorsCh := make(chan []api.Message)
 
-	result := api.Build(api.BuildOptions{
-		EntryPoints      : []string{entryPoint},
-		Bundle           : true,
-		MinifyWhitespace : false,
-		MinifyIdentifiers: false,
-		MinifySyntax     : false,
-		Engines          : []api.Engine{{Name: api.EngineChrome, Version: "91"}},
-		Write            : false,
-	})
-
-	if len(result.Errors) > 0 {
-		log.Fatalf("%+v", result.Errors)
-	} else {
-		D.SetScript(string(result.OutputFiles[0].Contents))
-	}
+	runBuild(entryPoint, errorsCh)
 
 	go func() {
 		for {
@@ -214,29 +218,37 @@ func build(doneCh <-chan bool, entryPoint string) (chan<- bool, <-chan bool, <-c
 				close(errorsCh)
 				return
 			case <- changeCh:
-				result := api.Build(api.BuildOptions{
-					EntryPoints      : []string{entryPoint},
-					Bundle           : true,
-					MinifyWhitespace : false,
-					MinifyIdentifiers: false,
-					MinifySyntax     : false,
-					Engines          : []api.Engine{{Name: api.EngineChrome, Version: "91"}},
-					Write            : false,
-				})
-
 				utils.Info("Building new version")
-
-				if len(result.Errors) > 0 {
-					errorsCh <- result.Errors
-				} else {
-					D.SetScript(string(result.OutputFiles[0].Contents))
-					// shell.Clear()
-					utils.Success("Build is done!")
-					reloadCh <- true
-				}
+				runBuild(entryPoint, errorsCh)
+				utils.Success("Build is done!")
+				reloadCh <- true
 			}
 		}
 	}()
 
 	return changeCh, reloadCh, errorsCh
+}
+
+func runBuild(entryPoint string, errorsCh chan<- []api.Message) {
+	result := api.Build(api.BuildOptions{
+		EntryPoints      : []string{entryPoint},
+		Bundle           : true,
+		MinifyWhitespace : false,
+		MinifyIdentifiers: false,
+		MinifySyntax     : false,
+		Outfile          : "index.js",
+		Engines          : []api.Engine{{Name: api.EngineChrome, Version: "91"}},
+		Write            : false,
+	})
+
+	if len(result.Errors) > 0 {
+		errorsCh <- result.Errors
+	} else {
+		if len(result.OutputFiles) > 0 {
+			D.SetScript(string(result.OutputFiles[0].Contents))
+		}
+		if len(result.OutputFiles) > 1 {
+			D.SetStyles(string(result.OutputFiles[1].Contents))
+		}
+	}
 }

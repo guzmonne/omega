@@ -1,0 +1,36 @@
+Arguments: 
+  /Users/gmonne/.nvm/versions/node/v14.15.1/bin/node /usr/local/Cellar/yarn/1.22.10/libexec/bin/yarn.js init
+
+PATH: 
+  /usr/local/opt/ruby/bin:/usr/local/lib/ruby/gems/3.0.0/bin:/usr/local/opt/icu4c/sbin:/usr/local/opt/icu4c/bin:/usr/local/opt/sqlite/bin:/usr/local/opt/openssl@1.1/bin:/usr/local/opt/m4/bin:/Users/gmonne/.nvm/versions/node/v14.15.1/bin:/Users/gmonne/.cargo/bin:/Users/gmonne/bin:/Users/gmonne/Projects/go/bin:/usr/local/Cellar/pyenv-virtualenv/1.1.5/shims:/Users/gmonne/.pyenv/shims:/usr/local/Cellar/pyenv-virtualenv/1.1.5/shims:/Users/gmonne/.pyenv/shims:/Users/gmonne/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/VMware Fusion.app/Contents/Public:/usr/local/go/bin:/opt/X11/bin:/Library/Apple/usr/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/usr/local/opt/ruby/bin:/usr/local/lib/ruby/gems/3.0.0/bin:/usr/local/opt/icu4c/sbin:/usr/local/opt/icu4c/bin:/usr/local/opt/sqlite/bin:/usr/local/opt/openssl@1.1/bin:/usr/local/opt/m4/bin:/Users/gmonne/.nvm/versions/node/v14.15.1/bin:/Users/gmonne/.cargo/bin:/Users/gmonne/bin:/Users/gmonne/Projects/go/bin:/usr/local/Cellar/pyenv-virtualenv/1.1.5/shims:/Users/gmonne/.pyenv/shims:/usr/local/opt/fzf/bin:/Users/gmonne/Library/Android/sdk/platform-tools:/Users/gmonne/Library/Android/sdk/tools:/Users/gmonne/Library/Android/sdk/emulator:/Users/gmonne/Library/Android/sdk/tools/bin:/Users/gmonne/Library/Android/sdk/platform-tools:/Users/gmonne/Library/Android/sdk/tools:/Users/gmonne/Library/Android/sdk/emulator:/Users/gmonne/Library/Android/sdk/tools:/Users/gmonne/Library/Android/sdk/tools/bin:/Users/gmonne/Library/Android/sdk/platform-tools
+
+Yarn version: 
+  1.22.10
+
+Node version: 
+  14.15.1
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: canceled
+      at Interface.<anonymous> (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:137009:13)
+      at Interface.emit (events.js:315:20)
+      at Interface._ttyWrite (readline.js:875:16)
+      at ReadStream.onkeypress (readline.js:213:10)
+      at ReadStream.emit (events.js:315:20)
+      at emitKeys (internal/readline/utils.js:345:14)
+      at emitKeys.next (<anonymous>)
+      at ReadStream.onData (readline.js:1144:36)
+      at ReadStream.emit (events.js:315:20)
+      at addChunk (_stream_readable.js:309:12)
+
+npm manifest: 
+  No manifest
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

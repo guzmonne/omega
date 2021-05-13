@@ -57,6 +57,10 @@ func Serve(options WebServerOptions) {
 	router.GET("/dev/script.js", func(c *gin.Context) {
 		c.String(http.StatusOK, D.GetScript())
 	})
+	router.GET("/dev/styles.css", func(c *gin.Context) {
+		c.Header("Content-Type", "text/css")
+		c.String(http.StatusOK, D.GetStyles())
+	})
 	// Run the server
 	router.Run(fmt.Sprintf(":%d", options.Port))
 }
