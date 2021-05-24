@@ -236,7 +236,7 @@ func runBuild(entryPoint string, errorsCh chan<- []api.Message) {
 		MinifyWhitespace : false,
 		MinifyIdentifiers: false,
 		MinifySyntax     : false,
-		Outfile          : "index.js",
+		Outdir           : "./assets",
 		Engines          : []api.Engine{{Name: api.EngineChrome, Version: "91"}},
 		Write            : false,
 	})
@@ -245,9 +245,11 @@ func runBuild(entryPoint string, errorsCh chan<- []api.Message) {
 		errorsCh <- result.Errors
 	} else {
 		if len(result.OutputFiles) > 0 {
+			fmt.Println(result.OutputFiles[0].Path)
 			D.SetScript(string(result.OutputFiles[0].Contents))
 		}
 		if len(result.OutputFiles) > 1 {
+			fmt.Println(result.OutputFiles[0].Path)
 			D.SetStyles(string(result.OutputFiles[1].Contents))
 		}
 	}
