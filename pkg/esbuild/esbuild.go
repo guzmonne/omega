@@ -25,8 +25,8 @@ func (b *Build) Run() api.BuildResult {
 }
 
 // NewBuild creates a new build struct.
-func NewBuild(entryPoint string) Build {
-	b := Build{
+func NewBuild(entryPoint string) *Build {
+	b := &Build{
 		options: api.BuildOptions{
 			EntryPoints      : []string{entryPoint},
 			Bundle           : true,
@@ -35,6 +35,7 @@ func NewBuild(entryPoint string) Build {
 			MinifySyntax     : false,
 			Outfile          : "index.js",
 			Engines          : []api.Engine{{Name: api.EngineChrome, Version: "91"}},
+			Incremental      : true,
 			Write            : false,
 		},
 	}
