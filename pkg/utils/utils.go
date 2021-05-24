@@ -10,6 +10,14 @@ import (
 	"github.com/oklog/ulid"
 )
 
+func MapStringTimeKeys(source map[string]time.Time) []string {
+	keys := make([]string, 0, len(source))
+	for k := range source {
+			keys = append(keys, k)
+	}
+	return keys
+}
+
 func Touch(filePath string, content string) error {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {

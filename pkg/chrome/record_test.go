@@ -53,7 +53,7 @@ func (suite *RecordSuite) TestRecord() {
 	browser.Chrome.(*mbrowser.BrowserHandler).AssertNumberOfCalls(suite.T(), "NewContext", params.Workers)
 
 	// Calculate the amount of frames ro record.
-	framesToRecord  := math.Ceil(params.Duration * FPS / 1000)
+	framesToRecord := math.Ceil(params.Duration * FPS / 1000)
 
 	// Check that the screenshot function was called for each frame
 	browser.Chrome.(*mbrowser.BrowserHandler).AssertNumberOfCalls(suite.T(), "Screenshot", int(framesToRecord))
