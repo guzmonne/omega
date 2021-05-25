@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/chromedp/chromedp"
@@ -15,57 +14,17 @@ import (
 	"gux.codes/omega/pkg/utils"
 )
 
-type DevelopmentEnvironment interface {
-	// SetScript sets the current development script
-	SetScript(script string)
-	// GetScript gets the current development script
-	GetScript() string
-	// SetStyle sets the current development script
-	SetStyles(style string)
-	// GetStyle gets the current development script
-	GetStyles() string
+// DevOptions encloses the configuration of the Dev process.
+type DevOptions struct {
+	EntryPoint		string
+	Width					int
+	Height				int
 }
 
-type Dev struct {
-	// mu mutex protects the rest of the properties
-	mu sync.Mutex
-	// Script stores the current built script
-	Script string
-	// Styles stores the current build styles
-	Styles string
-}
+// Global build struct
+var build = esbuild.NewBuild()
 
-// SetScript sets the current development script safely
-func (d *Dev) SetScript(script string) {
-	d.mu.Lock()
-	d.Script = script
-	d.mu.Unlock()
-}
-
-// GetScript gets the current development script safely
-func (d *Dev) GetScript() string {
-	return d.Script
-}
-
-// SetStyles sets the current development script safely
-func (d *Dev) SetStyles(script string) {
-	d.mu.Lock()
-	d.Styles = script
-	d.mu.Unlock()
-}
-
-// GetStyles gets the current development script safely
-func (d *Dev) GetStyles() string {
-	return d.Styles
-}
-
-var D DevelopmentEnvironment
-
-func init() {
-	D = &Dev{Script: `console.log("Hello, World!")`}
-}
-
-func NewDev(entryPoint string) error {
+func NewDev(options DevOptions) error {
 	// Clear the screen
 	utils.Info("Starting the development environment...")
 
@@ -75,8 +34,7 @@ func NewDev(entryPoint string) error {
     chromedp.Flag("enable-automation", false),
     chromedp.Flag("disable-extensions", false),
     chromedp.Flag("auto-open-devtools-for-tabs", true),
-    chromedp.Flag("enable-kiosk-mode", true),
-    chromedp.Flag("window-size", "1200,700"),
+    chromedp.Flag("window-size", fmt.Sprintf("%d,%d", options.Width, options.Height)),
 	)
 
 	// Start the web server on a different goroutine
@@ -96,8 +54,8 @@ func NewDev(entryPoint string) error {
 	defer cancel()
 	utils.Info("Starting the browser...")
 
-	// Create the build struct
-	build := esbuild.NewBuild(entryPoint)
+	// Customize the build
+	build.WithEntrypoints([]string{options.EntryPoint})
 
 	// Run an initial build
 	result := build.Run()
@@ -108,6 +66,7 @@ func NewDev(entryPoint string) error {
 	if err := chromedp.Run(ctx, chromedp.Navigate(fmt.Sprintf("http://localhost:%d/dev", webServerOptions.Port))); err != nil {
 		log.Fatal(err)
 	}
+	chromedp.Run(ctx, )
 	utils.BoxGreen("Navigating to the development site...")
 
 	stop := build.WithWatch(func (result api.BuildResult) {
@@ -146,9 +105,9 @@ func buildDone(result api.BuildResult) {
 		return
 	}
 	if len(result.OutputFiles) > 0 {
-		D.SetScript(string(result.OutputFiles[0].Contents))
+		build.Set("script.js", result.OutputFiles[0].Contents)
 	}
 	if len(result.OutputFiles) > 1 {
-		D.SetStyles(string(result.OutputFiles[1].Contents))
+		build.Set("styles.css", result.OutputFiles[1].Contents)
 	}
 }

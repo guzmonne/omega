@@ -248,12 +248,29 @@ func main() {
 								Usage: "entrypoints of the development environment",
 								EnvVars: []string{"OMEGA_CHROME_DEV_ENTRYPOINT"},
 							},
+							&cli.IntFlag{
+								Name: "width",
+								Value: 1200,
+								Aliases: []string{"W"},
+								Usage: "width of Chrome's window",
+								EnvVars: []string{"OMEGA_CHROME_DEV_WIDTH"},
+							},
+							&cli.IntFlag{
+								Name: "height",
+								Value: 700,
+								Aliases: []string{"H"},
+								Usage: "height of Chrome's window",
+								EnvVars: []string{"OMEGA_CHROME_DEV_HEIGHT"},
+							},
 						},
 						Action: func(c *cli.Context) error {
-							if err := chrome.NewDev(c.String("entryPoint")); err != nil {
+							if err := chrome.NewDev(chrome.DevOptions{
+								EntryPoint: c.String("entryPoint"),
+								Width     : c.Int("width"),
+								Height    : c.Int("height"),
+							}); err != nil {
 								return err
 							}
-
 							return nil
 						},
 					},
